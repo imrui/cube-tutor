@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createIcons, Box, Sprout, Check, Cloud, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, Mouse, RotateCcw, SkipBack, Play, Pause, SkipForward, Focus, Lightbulb, ArrowRight, Keyboard, Shuffle, Bookmark, X, BookOpen, Moon, Sun } from 'lucide';
 import { parseMove, rotatePosition, inverse, moveFromDrag, practiceStep } from './cube.js';
-import { lessons, moveText } from './lessons.js';
+import { lessons, moveText, resolveLesson } from './lessons.js';
+import { evaluateGoal } from './cube-state.js';
 
 const icon = (name, cls = '') => `<i data-lucide="${name}" class="${cls}"></i>`;
 // Storage may be unavailable (private mode, blocked site data) or hold stale values.
@@ -15,10 +16,13 @@ let selected = store.get('cube-lesson', 0);
 if (!Number.isInteger(selected) || !lessons[selected]) selected = 0;
 let completed = store.get('cube-completed', []);
 completed = Array.isArray(completed) ? [...new Set(completed)].filter(i => Number.isInteger(i) && lessons[i]) : [];
+const savedCases = store.get('cube-passed-cases', []);
+const passedCases = new Set(Array.isArray(savedCases) ? savedCases.filter(key => typeof key === 'string') : []);
 const coarse = matchMedia('(pointer: coarse)').matches;
 const isPhone = () => matchMedia('(max-width: 620px)').matches;
 let mode = 'learn', step = 0, playing = false, busy = false, speed = 1, focus = false, arrows = true, pendingHalf = null, generation = 0, playRun = 0;
-let lesson = lessons[selected];
+let caseIndex = 0, activeMove = null, activeDirection = 'forward';
+let lesson = resolveLesson(selected);
 document.querySelector('#app').innerHTML = `
 <aside class="sidebar">
   <a class="brand" href="#" aria-label="方寸首页"><span class="brand-mark">${icon('box')}</span><span>方寸<span class="brand-en">CUBE TUTOR</span></span></a>
@@ -44,6 +48,13 @@ document.querySelector('#app').innerHTML = `
   </main>
 </div><div id="toast" role="status"></div><dialog id="help-dialog"><button id="close-help" class="icon-button" aria-label="关闭">${icon('x')}</button><div class="eyebrow">A LITTLE HELP</div><h2>你的魔方，听你的。</h2><p>拖动魔方改变视角，滚轮或双指缩放。在「跟我练习」和「自由练习」中，按住魔方的一面滑动即可转动那一层；拖动魔方外的空白处旋转视角。</p><div class="help-grid"><b>R / L</b><span>右面 / 左面</span><b>U / D</b><span>顶层 / 底层</span><b>F / B</b><span>前面 / 后面</span><b>Shift + 字母</b><span>逆时针转动</span><b>Space</b><span>播放 / 暂停动画</span><b>← / →</b><span>后退 / 前进一步</span></div><p>所有顺逆时针都以正对该面的方向为准。跟练模式会按公式检查每个动作，半转可以连按两次同一个字母；自由练习可以任意转动。</p></dialog>`;
 const $ = selector => document.querySelector(selector);
+$('.goal-box').insertAdjacentHTML('afterend', '<div id="goal-status" class="goal-status" role="status" aria-live="polite"></div><div class="case-row"><label for="case-select">练习局面</label><select id="case-select"></select><span id="case-count"></span></div><p id="case-note" class="case-note"></p>');
+// Keep the move pad next to the cube even when a multi-stage lesson is long.
+for (const [className, selectors] of [['cube-column', ['.cube-card', '.practice-card']], ['lesson-column', ['.instruction-card', '.knowledge-card']]]) {
+  const column = document.createElement('div'); column.className = className;
+  $('.workspace').append(column); selectors.forEach(selector => column.append($(selector)));
+}
+$('.bottom-grid').remove();
 const refreshIcons = () => createIcons({ icons: { Box, Sprout, Check, Cloud, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, Mouse, RotateCcw, SkipBack, Play, Pause, SkipForward, Focus, Lightbulb, ArrowRight, Keyboard, Shuffle, Bookmark, X, BookOpen, Moon, Sun }, attrs: { 'stroke-width': 1.7 } });
 
 // Theme: follows the system unless the learner picks the other one; the 3D scene reads its colors from CSS tokens.
@@ -187,19 +198,23 @@ function focusCube() {
     const target = focusTargets[lesson.focus](x, y, z, [x, y, z].filter(v => v !== 0).length === 2);
     c.children.filter(o => o.userData.sticker).forEach(s => s.material.color.set(focus && !target ? palette.dim : palette.faces[s.userData.face]));
   });
-  arrow.visible = arrows && mode !== 'sandbox';
   updateArrow();
 }
+function guideMove() { return activeMove ?? pendingHalf ?? lesson.formula[step] ?? null; }
 function updateArrow() {
-  const move = lesson.formula[Math.min(step, lesson.formula.length - 1)], { axis, layer, turns } = parseMove(move);
+  const move = guideMove();
+  arrow.visible = arrows && mode !== 'sandbox' && !!move;
+  $('#viewport').dataset.guideMove = arrow.visible ? move : '';
+  if (!arrow.visible) return;
+  const { axis, layer, turns } = parseMove(move);
   // Snap the arc to the corner of the layer's ring that faces the camera, so it stays in view as the learner orbits.
   const cam = camera.position, phi = Math.atan2(cam.getComponent((axis + 2) % 3), cam.getComponent((axis + 1) % 3));
   const center = Math.PI / 4 + Math.round((phi - Math.PI / 4) / (Math.PI / 2)) * Math.PI / 2, key = `${move} ${center.toFixed(2)}`;
   if (key !== arrowKey) { arrowKey = key; buildArrow(axis, layer, turns, center); }
 }
-async function turn(move) {
+async function turn(move, direction = 'forward') {
   if (busy) return false;
-  busy = true; syncControls();
+  busy = true; activeMove = move; activeDirection = direction; renderStep();
   const { axis, layer, turns } = parseMove(move), pivot = new THREE.Group(); cubeRoot.add(pivot);
   const affected = cubies.filter(c => c.userData.pos[axis] === layer);
   affected.forEach(c => pivot.attach(c));
@@ -213,7 +228,7 @@ async function turn(move) {
     requestAnimationFrame(animate);
   });
   affected.forEach(c => { cubeRoot.attach(c); c.userData.pos = rotatePosition(c.userData.pos, axis, turns); c.position.set(...c.userData.pos); });
-  cubeRoot.remove(pivot); busy = false; syncControls(); return true;
+  cubeRoot.remove(pivot); busy = false; activeMove = null; activeDirection = 'forward'; syncControls(); return true;
 }
 new ResizeObserver(() => { const el = $('#viewport'); camera.aspect = el.clientWidth / el.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(el.clientWidth, el.clientHeight); }).observe($('#viewport'));
 // The move label floats beside the arrowhead, pushed away from the cube's center on screen so it never covers the cube.
@@ -244,31 +259,74 @@ function renderNavigation() {
 function syncControls() {
   $('#prev').disabled = busy || step === 0 || mode !== 'learn'; $('#next').disabled = busy || step === lesson.formula.length || mode !== 'learn';
   $('#reset').disabled = busy;
+  $('#case-select').disabled = busy;
+}
+function readCubeState() {
+  cubeRoot.updateMatrixWorld(true);
+  return cubies.map(c => ({
+    home: c.userData.home,
+    pos: c.position.toArray().map(Math.round),
+    stickers: c.children.filter(s => s.userData.sticker).map(s => ({
+      face: s.userData.face,
+      normal: new THREE.Vector3(0, 0, 1).applyQuaternion(s.getWorldQuaternion(new THREE.Quaternion())).round().toArray(),
+    })),
+  }));
+}
+const caseKey = () => `${selected}:${lesson.id}`;
+function renderCases() {
+  $('#case-select').innerHTML = lessons[selected].cases.map((c, i) => `<option value="${i}" ${i === caseIndex ? 'selected' : ''}>${passedCases.has(`${selected}:${c.id}`) ? '✓ ' : ''}${c.name}</option>`).join('');
+  const count = lessons[selected].cases.filter(c => passedCases.has(`${selected}:${c.id}`)).length;
+  $('#case-count').textContent = `${count} / ${lessons[selected].cases.length} 已跟练`;
+}
+function renderGoal() {
+  if (busy) return;
+  const status = $('#goal-status');
+  if (mode === 'sandbox') {
+    const result = evaluateGoal(readCubeState(), 'solved');
+    status.dataset.met = String(result.achieved); status.classList.toggle('passed', result.achieved);
+    status.textContent = result.achieved ? '六面已还原，可以开始新的挑战。' : `自由探索中 · ${result.correct} / ${result.total} 块归位`;
+    return;
+  }
+  const result = evaluateGoal(readCubeState(), lesson.goalType, { step, totalSteps: lesson.formula.length });
+  const finished = step === lesson.formula.length && !pendingHalf;
+  const passed = finished && result.achieved;
+  status.dataset.met = String(passed); status.classList.toggle('passed', passed);
+  status.textContent = passed ? (mode === 'practice' ? '✓ 目标已达成，本局面跟练通过！' : '✓ 演示目标已达成，切换到「跟我练习」试试看。') : `${result.label} ${result.correct} / ${result.total}${result.prerequisite ? '' : ' · 还需保持已完成的层'}${finished ? ' · 目标尚未达成，请重置再练' : ''}`;
+  if (passed && mode === 'practice' && !passedCases.has(caseKey())) {
+    passedCases.add(caseKey()); store.set('cube-passed-cases', [...passedCases]);
+    if (lessons[selected].cases.every(c => passedCases.has(`${selected}:${c.id}`)) && !completed.includes(selected)) {
+      completed.push(selected); store.set('cube-completed', completed); renderNavigation();
+    }
+    renderCases(); toast('目标已达成！本局面跟练进度已保存。');
+  }
 }
 const notation = move => move.replace("'", '′');
 function practicePrompt() {
-  if (step === lesson.formula.length) return '做到了！整组动作已完成，点击重置再练一次。';
+  if (step === lesson.formula.length) return $('#goal-status').dataset.met === 'true' ? '做到了！目标已达成，可切换局面继续练习。' : '动作已做完，但目标未达成。请重置后再练。';
   const move = lesson.formula[step];
   if (pendingHalf) return `很好，再转一次 ${notation(pendingHalf)}，完成 180° 半转。`;
   return `轮到你了：请转动 ${notation(move)} · ${moveText(move)}${move.endsWith('2') ? '（连转两次同一面）' : ''}`;
 }
 function renderStep() {
   updateArrow();
-  $('#formula').innerHTML = lesson.formula.map((m, i) => `<button class="formula-move ${i === step ? 'current' : ''} ${i < step ? 'finished' : ''}" data-step="${i}" ${mode === 'learn' ? `aria-label="跳到第 ${i + 1} 步"` : 'tabindex="-1"'}>${notation(m)}<small>${i + 1}</small></button>`).join('');
+  const displayStep = activeMove && activeDirection === 'backward' ? step - 1 : step;
+  $('#formula').innerHTML = lesson.formula.map((m, i) => `<button class="formula-move ${i === displayStep ? 'current' : ''} ${i < displayStep ? 'finished' : ''}" data-step="${i}" ${mode === 'learn' ? `aria-label="跳到第 ${i + 1} 步"` : 'tabindex="-1"'}>${notation(m)}<small>${i + 1}</small></button>`).join('');
   $('#formula').classList.toggle('locked', mode !== 'learn');
   $('#step-status').textContent = `动作 ${step} / ${lesson.formula.length}`;
   $('#timeline-fill').style.width = `${step / lesson.formula.length * 100}%`;
-  const idx = Math.min(step, lesson.formula.length - 1), move = lesson.formula[idx];
+  const idx = Math.max(0, Math.min(displayStep, lesson.formula.length - 1)), move = guideMove();
   $('#action-number').textContent = String(idx + 1).padStart(2, '0');
-  $('#action-title').textContent = step === lesson.formula.length ? '这组动作，完成了！' : lesson.stepLabels?.[idx] ?? moveText(move);
-  $('#action-subtitle').textContent = step === lesson.formula.length ? '再播放一次，或者动手跟练吧' : moveText(move);
-  $('#action-arrow').textContent = move.endsWith("'") ? '↺' : '↻';
-  const tag = $('#move-tag'), letter = notation(move);
-  tag.classList.toggle('visible', arrow.visible && step < lesson.formula.length);
-  if ($('#move-tag-letter').textContent !== letter || tag.dataset.step !== String(step)) {
-    $('#move-tag-letter').textContent = letter; $('#move-tag-text').textContent = moveText(move); tag.dataset.step = step;
+  $('#action-title').textContent = !move ? '这组动作，完成了！' : activeDirection === 'backward' ? `回退 · ${notation(move)}` : pendingHalf ? '再转一次，完成半转' : lesson.stepLabels?.[idx] ?? moveText(move);
+  $('#action-subtitle').textContent = move ? moveText(move) : '观察结果，再切换到跟练模式';
+  $('#action-arrow').textContent = !move ? '✓' : move.endsWith("'") ? '↺' : '↻';
+  const tag = $('#move-tag'), letter = move ? notation(move) : '';
+  tag.classList.toggle('visible', arrow.visible);
+  if ($('#move-tag-letter').textContent !== letter || tag.dataset.step !== String(displayStep)) {
+    $('#move-tag-letter').textContent = letter; $('#move-tag-text').textContent = move ? moveText(move) : ''; tag.dataset.step = displayStep;
     tag.classList.remove('pop'); void tag.offsetWidth; tag.classList.add('pop');
   }
+  $('#case-note').textContent = lesson.stages?.filter(s => s.start <= displayStep).at(-1)?.text ?? lesson.note;
+  renderGoal();
   syncControls();
   $('#play').innerHTML = icon(playing ? 'pause' : 'play'); $('#play').setAttribute('aria-label', playing ? '暂停' : '播放');
   $('#play').disabled = mode !== 'learn';
@@ -276,21 +334,22 @@ function renderStep() {
   refreshIcons();
 }
 function reset() {
-  playing = false; generation++; playRun++; step = 0; pendingHalf = null; makeCube();
+  playing = false; generation++; playRun++; step = 0; pendingHalf = null; activeMove = null; makeCube();
   if (mode !== 'sandbox') lesson.setup.forEach(applyInstant);
   focusCube(); renderStep();
 }
-function selectLesson(i) {
+function selectLesson(i, nextCase = 0) {
   if (busy) return;
-  selected = i; lesson = lessons[i]; store.set('cube-lesson', i); mode = 'learn';
+  selected = i; caseIndex = nextCase; lesson = resolveLesson(i, caseIndex); store.set('cube-lesson', i); mode = 'learn';
   $('#crumb').textContent = `${lesson.label} · ${lesson.title}`; $('#heading').textContent = lesson.intro;
   $('#lesson-kicker').innerHTML = `${lesson.label} <span>·</span> ${lesson.time}`;
   $('#lesson-title').textContent = lesson.title; $('#lesson-desc').textContent = lesson.desc; $('#goal').textContent = lesson.goal;
   $('#tip').textContent = lesson.tip; $('#detail').textContent = lesson.detail;
   $('#formula-title').textContent = lesson.algorithm ?? lesson.formulaTitle ?? '本节动作公式';
   $('#duration').textContent = lesson.algorithm ?? lesson.en;
-  $('#complete').innerHTML = `${selected === lessons.length - 1 ? '完成课程，再练一次' : '我学会了，下一节'} ${icon('arrow-right')}`;
-  updateMode(); renderNavigation(); reset();
+  $('#complete').innerHTML = `${caseIndex < lessons[selected].cases.length - 1 ? '下一个局面' : selected === lessons.length - 1 ? '返回第一节' : '继续下一节'} ${icon('arrow-right')}`;
+  $('.no-rush').textContent = '跟练达成目标后自动记录，随时可以切换章节';
+  updateMode(); renderNavigation(); renderCases(); reset();
 }
 function updateMode() {
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
@@ -334,7 +393,7 @@ function wrongMove(message) {
   $('#move-keys').classList.remove('shake'); void $('#move-keys').offsetWidth; $('#move-keys').classList.add('shake'); navigator.vibrate?.(70); toast(message);
 }
 async function performMove(move) {
-  if (mode !== 'practice') { await turn(move); return; }
+  if (mode !== 'practice') { await turn(move); renderStep(); return; }
   const expected = lesson.formula[step];
   if (!expected) return toast('本组动作已完成，点击重置再试一次');
   const result = practiceStep(expected, move, pendingHalf);
@@ -343,14 +402,13 @@ async function performMove(move) {
   if (result === 'half-start') pendingHalf = move;
   else { if (result !== 'half-undo') step++; pendingHalf = null; }
   navigator.vibrate?.(12); renderStep();
-  if (step === lesson.formula.length) toast('漂亮！你完成了这组手法。');
 }
 let toastTimer;
 function toast(message) { $('#toast').textContent = message; $('#toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('visible'), 3000); }
 $('#move-keys').innerHTML = ['U', 'D', 'L', 'R', 'F', 'B'].map((m, i) => `<button data-move="${m}" aria-label="${['顶层', '底层', '左面', '右面', '前面', '后面'][i]} ${m}"><b>${m}</b><span>${['顶层', '底层', '左面', '右面', '前面', '后面'][i]}</span><small>↻</small></button>`).join('');
 $('#lessons').onclick = e => { const b = e.target.closest('[data-lesson]'); if (b) selectLesson(Number(b.dataset.lesson)); };
 $('#play').onclick = playback; $('#next').onclick = next;
-$('#prev').onclick = async () => { if (busy || step === 0 || mode !== 'learn') return; playing = false; const token = generation; await turn(inverse(lesson.formula[step - 1])); if (token !== generation) return; step--; renderStep(); };
+$('#prev').onclick = async () => { if (busy || step === 0 || mode !== 'learn') return; playing = false; playRun++; const token = generation; await turn(inverse(lesson.formula[step - 1]), 'backward'); if (token !== generation) return; step--; renderStep(); };
 $('#reset').onclick = () => { if (!busy) { reset(); toast(mode === 'sandbox' ? '已恢复六面复原态' : '已回到本节起始局面'); } };
 $('#speed').onclick = () => { speed = speed === 1 ? 1.5 : speed === 1.5 ? .5 : 1; $('#speed').innerHTML = `${speed}× <span>速度</span>`; };
 $('#focus').onchange = e => { focus = e.target.checked; focusCube(); };
@@ -365,16 +423,21 @@ $('#scramble').onclick = async () => {
   switchMode('sandbox');
   const faces = ['R', 'L', 'U', 'D', 'F', 'B']; let previous = ''; const moves = [];
   for (let i = 0; i < 22; i++) { const options = faces.filter(f => f !== previous); previous = options[Math.floor(Math.random() * options.length)]; moves.push(previous + ['', "'", '2'][Math.floor(Math.random() * 3)]); }
-  moves.forEach(applyInstant); $('#practice-message').textContent = `已随机打乱 22 步。试着自己还原吧！`; toast('新的挑战准备好了');
+  moves.forEach(applyInstant); renderGoal(); $('#practice-message').textContent = `已随机打乱 22 步。试着自己还原吧！`; toast('新的挑战准备好了');
 };
-$('#complete').onclick = () => { if (busy) return; if (!completed.includes(selected)) completed.push(selected); store.set('cube-completed', completed); const last = selected === lessons.length - 1; selectLesson(last ? 0 : selected + 1); if (last) toast('恭喜完成课程！每一次练习都会更熟练。'); };
+function selectCase(index) {
+  const previousMode = mode; selectLesson(selected, index);
+  if (previousMode === 'practice') switchMode('practice');
+}
+$('#complete').onclick = () => { if (busy) return; if (caseIndex < lessons[selected].cases.length - 1) selectCase(caseIndex + 1); else selectLesson(selected === lessons.length - 1 ? 0 : selected + 1); };
+$('#case-select').onchange = e => selectCase(Number(e.target.value));
 $('#formula').onclick = e => { const b = e.target.closest('[data-step]'); if (!b || busy || mode !== 'learn') return; const target = Number(b.dataset.step); reset(); for (let i = 0; i < target; i++) applyInstant(lesson.formula[i]); step = target; renderStep(); };
 $('#theme').onclick = () => {
   const next = isDark() ? 'light' : 'dark';
   theme = next === (darkQuery.matches ? 'dark' : 'light') ? null : next;
   store.set('cube-theme', theme); retheme();
 };
-function retheme() { applyTheme(); bodyMaterial.color.set(palette.body); arrowMaterial.color.set(palette.arrow); haloMaterial.color.set(palette.arrowHalo); focusCube(); }
+function retheme() { applyTheme(); bodyMaterial.color.set(palette.body); arrowMaterial.color.set(palette.arrow); haloMaterial.color.set(palette.arrowHalo); focusCube(); renderStep(); }
 darkQuery.addEventListener('change', () => { if (!theme) retheme(); });
 $('#help').onclick = $('#more-help').onclick = () => $('#help-dialog').showModal();
 $('#close-help').onclick = () => $('#help-dialog').close();

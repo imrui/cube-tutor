@@ -203,7 +203,7 @@ h1{font-size:29px;letter-spacing:.4px;font-weight:650;margin:11px 0 10px;line-he
 .inverse-button{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:11px;color:var(--text-3)}
 .inverse-button>span{width:24px;height:22px;border:1px solid var(--line);border-radius:5px;display:grid;place-items:center;font:18px 'Outfit',sans-serif}
 .inverse-button.on{color:var(--ink)}
-.inverse-button.on span{background:var(--ink);border-color:var(--ink)}
+.inverse-button.on span{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
 .move-keys{display:flex;gap:10px;margin:19px 0 15px}
 .move-keys button{flex:1;display:flex;align-items:center;flex-direction:column;border:1px solid var(--line);border-bottom:3px solid var(--line);position:relative;border-radius:7px;background:var(--surface-2);padding:8px 3px 7px}
 .move-keys button:hover{border-color:var(--line-strong);background:var(--surface-2);transform:translateY(-2px)}
@@ -450,3 +450,19 @@ body[data-mode=sandbox] .timeline{visibility:hidden}
 @media(prefers-reduced-motion:reduce) {
   *,*:before,*:after{scroll-behavior:auto!important;animation:none!important;transition:none!important}
 }
+
+/* Case selection and verified learning goals. */
+.case-row{display:flex;align-items:center;gap:9px;margin-top:18px;flex-wrap:wrap}
+.case-row label{font-size:11px;color:var(--text-3)}
+.case-row select{flex:1;min-width:140px;max-width:100%;font:12px 'Noto Sans SC',sans-serif;color:var(--text-2);background:var(--surface-2);border:1px solid var(--line-strong);border-radius:7px;padding:9px 26px 9px 9px;cursor:pointer}
+.case-row select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+#case-count{font-size:10px;color:var(--text-3);margin-left:auto}
+.case-note{font-size:12px;line-height:1.8;color:var(--text-2);margin:10px 0 0;overflow-wrap:anywhere}
+.goal-status{font-size:11px;line-height:1.7;color:var(--text-3);padding:8px 10px;margin-top:9px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2)}
+.goal-status.passed{color:var(--success);background:var(--success-bg);border-color:transparent}
+body:not([data-mode=learn]) .timeline,body:not([data-mode=learn]) .transport-center{display:none}
+body:not([data-mode=learn]) .playback{padding-top:10px;padding-bottom:10px}
+body:not([data-mode=learn]) .transport{padding-top:0}
+.workspace{align-items:start}
+.cube-column,.lesson-column{display:flex;flex-direction:column;gap:22px;min-width:0}
+@media(max-width:620px){.cube-column,.lesson-column{display:contents}}
