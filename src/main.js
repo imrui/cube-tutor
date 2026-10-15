@@ -1,7 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createIcons, Box, Sprout, Check, Cloud, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, Mouse, RotateCcw, SkipBack, Play, Pause, SkipForward, Focus, Lightbulb, ArrowRight, Keyboard, Shuffle, Bookmark, X, BookOpen } from 'lucide';
+import { createIcons, Box, Sprout, Check, Cloud, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, Mouse, RotateCcw, SkipBack, Play, Pause, SkipForward, Focus, Lightbulb, ArrowRight, Keyboard, Shuffle, Bookmark, X, BookOpen, Moon, Sun } from 'lucide';
 import { parseMove, rotatePosition, inverse, moveFromDrag, practiceStep } from './cube.js';
 import { lessons, moveText } from './lessons.js';
 
@@ -28,7 +28,7 @@ document.querySelector('#app').innerHTML = `
   <div class="sidebar-footer"><span class="status-dot"></span>为每一个「我不会」而设计</div>
 </aside>
 <div class="main-shell">
-  <header><div class="breadcrumb">入门课程 <span>/</span> <b id="crumb"></b></div><div class="header-right"><span>${icon('cloud')} 进度自动保存</span><button class="icon-button" id="help" title="操作说明" aria-label="操作说明">${icon('circle-help')}</button><div class="avatar">Hi</div></div></header>
+  <header><div class="breadcrumb">入门课程 <span>/</span> <b id="crumb"></b></div><div class="header-right"><span>${icon('cloud')} 进度自动保存</span><button class="icon-button" id="theme"></button><button class="icon-button" id="help" title="操作说明" aria-label="操作说明">${icon('circle-help')}</button><div class="avatar">Hi</div></div></header>
   <main>
     <section class="page-heading"><div><div class="eyebrow"><span></span> LET’S MAKE IT CLICK</div><h1 id="heading"></h1><p>不用背下来。看一遍，转一遍，手就记住了。</p></div><button id="sandbox" class="outline-button">${icon('blocks')} 自由练习 ${icon('arrow-up-right')}</button></section>
     <div class="workspace">
@@ -44,7 +44,25 @@ document.querySelector('#app').innerHTML = `
   </main>
 </div><div id="toast" role="status"></div><dialog id="help-dialog"><button id="close-help" class="icon-button" aria-label="关闭">${icon('x')}</button><div class="eyebrow">A LITTLE HELP</div><h2>你的魔方，听你的。</h2><p>拖动魔方改变视角，滚轮或双指缩放。在「跟我练习」和「自由练习」中，按住魔方的一面滑动即可转动那一层；拖动魔方外的空白处旋转视角。</p><div class="help-grid"><b>R / L</b><span>右面 / 左面</span><b>U / D</b><span>顶层 / 底层</span><b>F / B</b><span>前面 / 后面</span><b>Shift + 字母</b><span>逆时针转动</span><b>Space</b><span>播放 / 暂停动画</span><b>← / →</b><span>后退 / 前进一步</span></div><p>所有顺逆时针都以正对该面的方向为准。跟练模式会按公式检查每个动作，半转可以连按两次同一个字母；自由练习可以任意转动。</p></dialog>`;
 const $ = selector => document.querySelector(selector);
-const refreshIcons = () => createIcons({ icons: { Box, Sprout, Check, Cloud, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, Mouse, RotateCcw, SkipBack, Play, Pause, SkipForward, Focus, Lightbulb, ArrowRight, Keyboard, Shuffle, Bookmark, X, BookOpen }, attrs: { 'stroke-width': 1.7 } });
+const refreshIcons = () => createIcons({ icons: { Box, Sprout, Check, Cloud, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, Mouse, RotateCcw, SkipBack, Play, Pause, SkipForward, Focus, Lightbulb, ArrowRight, Keyboard, Shuffle, Bookmark, X, BookOpen, Moon, Sun }, attrs: { 'stroke-width': 1.7 } });
+
+// Theme: follows the system unless the learner picks the other one; the 3D scene reads its colors from CSS tokens.
+const root = document.documentElement, darkQuery = matchMedia('(prefers-color-scheme: dark)');
+let theme = store.get('cube-theme', null);
+if (theme !== 'light' && theme !== 'dark') theme = null;
+const isDark = () => theme ? theme === 'dark' : darkQuery.matches;
+const token = name => getComputedStyle(root).getPropertyValue(name).trim();
+const palette = { faces: [], body: '', dim: '', arrow: '' };
+function applyTheme() {
+  if (theme) root.dataset.theme = theme; else delete root.dataset.theme;
+  palette.faces = ['red', 'orange', 'yellow', 'white', 'green', 'blue'].map(c => token(`--cube-${c}`));
+  Object.assign(palette, { body: token('--cube-body'), dim: token('--cube-dim'), arrow: token('--cube-arrow') });
+  document.querySelector('meta[name="theme-color"]').content = token('--bg');
+  const label = isDark() ? '切换到浅色模式' : '切换到深色模式';
+  $('#theme').innerHTML = icon(isDark() ? 'sun' : 'moon'); $('#theme').title = label; $('#theme').setAttribute('aria-label', label);
+  refreshIcons();
+}
+applyTheme();
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(34, 1, .1, 100);
@@ -89,20 +107,20 @@ scene.add(new THREE.AmbientLight(0xffffff, 2.5));
 const light = new THREE.DirectionalLight(0xffffff, 3.0); light.position.set(3, 8, 5); scene.add(light);
 const cubeRoot = new THREE.Group(); scene.add(cubeRoot);
 let cubies = [];
-const colors = [0xe95047, 0xff974d, 0xf8d451, 0xf7f6ed, 0x52a686, 0x579bd5];
-const stickerGeo = new THREE.PlaneGeometry(.855, .855);
+const stickerGeo = new THREE.PlaneGeometry(.855, .855), bodyGeo = new THREE.BoxGeometry(.975, .975, .975);
+const bodyMaterial = new THREE.MeshStandardMaterial({ color: palette.body, roughness: .55 });
 function makeCube() {
-  for (const cubie of cubies) { cubeRoot.remove(cubie); cubie.traverse(o => { if (o.material) o.material.dispose(); }); }
+  for (const cubie of cubies) { cubeRoot.remove(cubie); cubie.traverse(o => { if (o.userData.sticker) o.material.dispose(); }); }
   cubies = [];
   for (let x = -1; x <= 1; x++) for (let y = -1; y <= 1; y++) for (let z = -1; z <= 1; z++) {
     if (x === 0 && y === 0 && z === 0) continue;
     const group = new THREE.Group(); group.position.set(x, y, z); group.userData.pos = [x, y, z]; group.userData.home = [x, y, z];
-    const body = new THREE.Mesh(new THREE.BoxGeometry(.975, .975, .975), new THREE.MeshStandardMaterial({ color: 0x27332f, roughness: .55 })); group.add(body);
+    group.add(new THREE.Mesh(bodyGeo, bodyMaterial));
     const coords = [x, x, y, y, z, z];
     for (let f = 0; f < 6; f++) {
       if (coords[f] !== (f % 2 ? -1 : 1)) continue;
-      const mat = new THREE.MeshStandardMaterial({ color: colors[f], roughness: .42, metalness: .01 });
-      const mesh = new THREE.Mesh(stickerGeo, mat); mesh.userData.color = colors[f]; mesh.userData.white = y === -1; mesh.userData.sticker = true;
+      const mat = new THREE.MeshStandardMaterial({ color: palette.faces[f], roughness: .42, metalness: .01 });
+      const mesh = new THREE.Mesh(stickerGeo, mat); mesh.userData.face = f; mesh.userData.sticker = true;
       if (f === 0) { mesh.rotation.y = Math.PI / 2; mesh.position.x = .491; }
       if (f === 1) { mesh.rotation.y = -Math.PI / 2; mesh.position.x = -.491; }
       if (f === 2) { mesh.rotation.x = -Math.PI / 2; mesh.position.y = .491; }
@@ -119,7 +137,7 @@ function applyInstant(move) {
   const q = new THREE.Quaternion().setFromAxisAngle(axisVector, turns * Math.PI / 2);
   cubies.filter(c => c.userData.pos[axis] === layer).forEach(c => { c.userData.pos = rotatePosition(c.userData.pos, axis, turns); c.position.set(...c.userData.pos); c.quaternion.premultiply(q); });
 }
-const arrow = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(2, -.7, 1.7), 1.5, 0xe97956, .24, .17); scene.add(arrow);
+const arrow = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(2, -.7, 1.7), 1.5, palette.arrow, .24, .17); scene.add(arrow);
 const focusTargets = {
   centers: (x, y, z) => Math.abs(x) + Math.abs(y) + Math.abs(z) === 1,
   cross: (x, y, z, edge) => y === -1 && edge,
@@ -132,7 +150,7 @@ function focusCube() {
   cubies.forEach(c => {
     const [x, y, z] = c.userData.home;
     const target = focusTargets[lesson.focus](x, y, z, [x, y, z].filter(v => v !== 0).length === 2);
-    c.children.filter(o => o.userData.sticker).forEach(s => s.material.color.setHex(focus && !target ? 0xc8cfca : s.userData.color));
+    c.children.filter(o => o.userData.sticker).forEach(s => s.material.color.set(focus && !target ? palette.dim : palette.faces[s.userData.face]));
   });
   arrow.visible = arrows && mode !== 'sandbox';
   updateArrow();
@@ -295,6 +313,13 @@ $('#scramble').onclick = async () => {
 };
 $('#complete').onclick = () => { if (busy) return; if (!completed.includes(selected)) completed.push(selected); store.set('cube-completed', completed); const last = selected === lessons.length - 1; selectLesson(last ? 0 : selected + 1); if (last) toast('恭喜完成课程！每一次练习都会更熟练。'); };
 $('#formula').onclick = e => { const b = e.target.closest('[data-step]'); if (!b || busy || mode !== 'learn') return; const target = Number(b.dataset.step); reset(); for (let i = 0; i < target; i++) applyInstant(lesson.formula[i]); step = target; renderStep(); };
+$('#theme').onclick = () => {
+  const next = isDark() ? 'light' : 'dark';
+  theme = next === (darkQuery.matches ? 'dark' : 'light') ? null : next;
+  store.set('cube-theme', theme); retheme();
+};
+function retheme() { applyTheme(); bodyMaterial.color.set(palette.body); arrow.setColor(palette.arrow); focusCube(); }
+darkQuery.addEventListener('change', () => { if (!theme) retheme(); });
 $('#help').onclick = $('#more-help').onclick = () => $('#help-dialog').showModal();
 $('#close-help').onclick = () => $('#help-dialog').close();
 $('#help-dialog').onclick = e => { if (e.target === $('#help-dialog')) $('#help-dialog').close(); };
