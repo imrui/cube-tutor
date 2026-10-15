@@ -33,7 +33,7 @@ document.querySelector('#app').innerHTML = `
     <section class="page-heading"><div><div class="eyebrow"><span></span> LET’S MAKE IT CLICK</div><h1 id="heading"></h1><p>不用背下来。看一遍，转一遍，手就记住了。</p></div><button id="sandbox" class="outline-button">${icon('blocks')} 自由练习 ${icon('arrow-up-right')}</button></section>
     <div class="workspace">
       <section class="cube-card"><div class="cube-top"><div class="mode-tabs"><button data-mode="learn" class="active">${icon('play-circle')} 动画教学</button><button data-mode="practice">${icon('hand')} 跟我练习</button></div><span class="live-badge"><span></span> 3D 实时演示</span></div>
-        <div class="viewport" id="viewport"><div class="view-label"><span class="view-dot"></span><span id="view-label">白色底面 · 黄色朝上</span></div><button class="view-reset icon-button" id="view-reset" title="恢复默认视角" aria-label="恢复默认视角">${icon('scan')}</button><div class="drag-hint">${icon('move')} <span id="drag-hint"></span></div><div class="axis"><b class="axis-y">Y</b><b class="axis-z">Z</b><b class="axis-x">X</b><span></span></div></div>
+        <div class="viewport" id="viewport"><div class="view-label"><span class="view-dot"></span><span id="view-label">白色底面 · 黄色朝上</span></div><button class="view-reset icon-button" id="view-reset" title="恢复默认视角" aria-label="恢复默认视角">${icon('scan')}</button><div class="move-tag" id="move-tag" aria-hidden="true"><b id="move-tag-letter"></b><span id="move-tag-text"></span></div><div class="drag-hint">${icon('move')} <span id="drag-hint"></span></div><div class="axis"><b class="axis-y">Y</b><b class="axis-z">Z</b><b class="axis-x">X</b><span></span></div></div>
         <div class="cube-options"><label><input id="focus" type="checkbox"/><span class="switch"></span> 聚焦目标块</label><label><input id="arrows" type="checkbox" checked/><span class="switch"></span> 转动指引</label><span class="orientation">${icon(coarse ? 'hand' : 'mouse')} ${coarse ? '双指缩放' : '滚轮缩放'}</span></div>
         <div class="playback"><div class="timeline"><span id="step-status">动作 0 / 4</span><div class="timeline-track"><span id="timeline-fill"></span></div><span id="duration">右手四步法</span></div><div class="transport"><button id="reset" class="icon-button" title="重置本节" aria-label="重置">${icon('rotate-ccw')}</button><div class="transport-center"><button id="prev" class="icon-button" title="上一步" aria-label="上一步">${icon('skip-back')}</button><button id="play" class="play-button" title="播放或暂停" aria-label="播放">${icon('play')}</button><button id="next" class="icon-button" title="下一步" aria-label="下一步">${icon('skip-forward')}</button></div><button id="speed" class="speed-button" title="切换播放速度">1× <span>速度</span></button></div></div>
       </section>
@@ -52,11 +52,11 @@ let theme = store.get('cube-theme', null);
 if (theme !== 'light' && theme !== 'dark') theme = null;
 const isDark = () => theme ? theme === 'dark' : darkQuery.matches;
 const token = name => getComputedStyle(root).getPropertyValue(name).trim();
-const palette = { faces: [], body: '', dim: '', arrow: '' };
+const palette = { faces: [], body: '', dim: '', arrow: '', arrowHalo: '' };
 function applyTheme() {
   if (theme) root.dataset.theme = theme; else delete root.dataset.theme;
   palette.faces = ['red', 'orange', 'yellow', 'white', 'green', 'blue'].map(c => token(`--cube-${c}`));
-  Object.assign(palette, { body: token('--cube-body'), dim: token('--cube-dim'), arrow: token('--cube-arrow') });
+  Object.assign(palette, { body: token('--cube-body'), dim: token('--cube-dim'), arrow: token('--cube-arrow'), arrowHalo: token('--cube-arrow-halo') });
   document.querySelector('meta[name="theme-color"]').content = token('--bg');
   const label = isDark() ? '切换到浅色模式' : '切换到深色模式';
   $('#theme').innerHTML = icon(isDark() ? 'sun' : 'moon'); $('#theme').title = label; $('#theme').setAttribute('aria-label', label);
@@ -102,6 +102,7 @@ const endSwipe = e => { if (swipe && e.pointerId === swipe.id) { swipe = null; c
 renderer.domElement.addEventListener('pointerup', endSwipe);
 renderer.domElement.addEventListener('pointercancel', endSwipe);
 const controls = new OrbitControls(camera, renderer.domElement);
+controls.addEventListener('change', () => { if (arrow.visible) updateArrow(); });
 controls.enableDamping = true; controls.enablePan = false; controls.minDistance = 6; controls.maxDistance = 16;
 scene.add(new THREE.AmbientLight(0xffffff, 2.5));
 const light = new THREE.DirectionalLight(0xffffff, 3.0); light.position.set(3, 8, 5); scene.add(light);
@@ -137,7 +138,41 @@ function applyInstant(move) {
   const q = new THREE.Quaternion().setFromAxisAngle(axisVector, turns * Math.PI / 2);
   cubies.filter(c => c.userData.pos[axis] === layer).forEach(c => { c.userData.pos = rotatePosition(c.userData.pos, axis, turns); c.position.set(...c.userData.pos); c.quaternion.premultiply(q); });
 }
-const arrow = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(2, -.7, 1.7), 1.5, palette.arrow, .24, .17); scene.add(arrow);
+// Turn guide: a solid curved arrow that wraps the turning layer just above its stickers. It follows a rounded square
+// around the layer, centered on the edge nearest the camera; the halo keeps it readable over any sticker color.
+const RING = 1.6, BEND = .2, TUBE = .075, HEAD = [.2, .44], HALO = .04;
+const arrowMaterial = new THREE.MeshBasicMaterial({ color: palette.arrow });
+const haloMaterial = new THREE.MeshBasicMaterial({ color: palette.arrowHalo, side: THREE.BackSide });
+const arrow = new THREE.Group(); scene.add(arrow);
+let arrowKey = '';
+const arrowTip = new THREE.Vector3(), projected = new THREE.Vector3(), origin = new THREE.Vector3();
+const cubeCorners = [-1.5, 1.5].flatMap(x => [-1.5, 1.5].flatMap(y => [-1.5, 1.5].map(z => new THREE.Vector3(x, y, z))));
+// Where a ray at angle theta (in the layer plane) meets the rounded square of half-width RING and corner radius BEND.
+function ringPoint(theta) {
+  const c = Math.cos(theta), s = Math.sin(theta), hi = Math.max(Math.abs(c), Math.abs(s)), lo = Math.min(Math.abs(c), Math.abs(s)), k = RING - BEND;
+  let d = RING / hi;
+  if (d * lo > k) { const m = k * (hi + lo); d = m + Math.sqrt(m * m - 2 * k * k + BEND * BEND); }
+  return [c * d, s * d];
+}
+// The plane axes (axis+1, axis+2) are ordered so that increasing theta is a positive turn about the axis.
+class LayerArc extends THREE.Curve {
+  constructor(axis, offset, from, to) { super(); Object.assign(this, { axis, offset, from, to }); }
+  getPoint(t, target = new THREE.Vector3()) {
+    const [u, v] = ringPoint(this.from + (this.to - this.from) * t);
+    return target.setComponent(this.axis, this.offset).setComponent((this.axis + 1) % 3, u).setComponent((this.axis + 2) % 3, v);
+  }
+}
+function buildArrow(axis, layer, turns, center) {
+  const dir = Math.sign(turns), half = Math.abs(turns) === 2;
+  const curve = new LayerArc(axis, layer, center - dir * (half ? 1.55 : .8), center + dir * (half ? 1.35 : .62));
+  const end = curve.getPoint(1); arrowTip.copy(end);
+  const tangent = curve.getTangent(1), spin = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
+  const head = (r, h, back) => { const g = new THREE.ConeGeometry(r, h, 28); g.translate(0, h / 2 - back, 0); g.applyQuaternion(spin); g.translate(...end.toArray()); return g; };
+  const tail = r => new THREE.SphereGeometry(r, 16, 12).translate(...curve.getPoint(0).toArray());
+  arrow.children.forEach(m => m.geometry.dispose()); arrow.clear();
+  [[new THREE.TubeGeometry(curve, 96, TUBE + HALO, 12), head(HEAD[0] + HALO * 1.6, HEAD[1] + HALO * 3.4, HALO * 1.2), tail(TUBE + HALO)], [new THREE.TubeGeometry(curve, 96, TUBE, 12), head(...HEAD, 0), tail(TUBE)]]
+    .forEach((geos, i) => geos.forEach(g => arrow.add(new THREE.Mesh(g, i ? arrowMaterial : haloMaterial))));
+}
 const focusTargets = {
   centers: (x, y, z) => Math.abs(x) + Math.abs(y) + Math.abs(z) === 1,
   cross: (x, y, z, edge) => y === -1 && edge,
@@ -156,12 +191,11 @@ function focusCube() {
   updateArrow();
 }
 function updateArrow() {
-  const { axis, layer, turns } = parseMove(lesson.formula[Math.min(step, lesson.formula.length - 1)]);
-  const radial = axis === 0 ? new THREE.Vector3(0, -.6, 1.45) : axis === 1 ? new THREE.Vector3(.7, 0, 1.45) : new THREE.Vector3(1.2, .7, 0);
-  const normal = new THREE.Vector3(...[0, 1, 2].map(i => i === axis ? 1 : 0));
-  arrow.position.copy(radial).setComponent(axis, layer * 1.7);
-  arrow.setDirection(normal.cross(radial).multiplyScalar(Math.sign(turns)).normalize());
-  arrow.setLength(.95, .2, .13);
+  const move = lesson.formula[Math.min(step, lesson.formula.length - 1)], { axis, layer, turns } = parseMove(move);
+  // Snap the arc to the corner of the layer's ring that faces the camera, so it stays in view as the learner orbits.
+  const cam = camera.position, phi = Math.atan2(cam.getComponent((axis + 2) % 3), cam.getComponent((axis + 1) % 3));
+  const center = Math.PI / 4 + Math.round((phi - Math.PI / 4) / (Math.PI / 2)) * Math.PI / 2, key = `${move} ${center.toFixed(2)}`;
+  if (key !== arrowKey) { arrowKey = key; buildArrow(axis, layer, turns, center); }
 }
 async function turn(move) {
   if (busy) return false;
@@ -182,7 +216,23 @@ async function turn(move) {
   cubeRoot.remove(pivot); busy = false; syncControls(); return true;
 }
 new ResizeObserver(() => { const el = $('#viewport'); camera.aspect = el.clientWidth / el.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(el.clientWidth, el.clientHeight); }).observe($('#viewport'));
-renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+// The move label floats beside the arrowhead, pushed away from the cube's center on screen so it never covers the cube.
+function placeMoveTag() {
+  const tag = $('#move-tag'), el = $('#viewport'), w = el.clientWidth, h = el.clientHeight;
+  if (!tag.classList.contains('visible')) return;
+  // Narrow viewports have no room beside the cube; the label docks at the bottom instead.
+  const docked = w < 520; tag.classList.toggle('docked', docked);
+  if (docked) { tag.style.transform = ''; return; }
+  const toScreen = v => { projected.copy(v).project(camera); return [(projected.x + 1) / 2 * w, (1 - projected.y) / 2 * h]; };
+  const [cx, cy] = toScreen(origin), [tx, ty] = toScreen(arrowTip), len = Math.hypot(tx - cx, ty - cy) || 1;
+  // Clear the circle that encloses the cube's projected corners, measured from the cube's center along the arrowhead direction.
+  const radius = Math.max(...cubeCorners.map(c => { const [px, py] = toScreen(c); return Math.hypot(px - cx, py - cy); }));
+  const half = Math.hypot(tag.offsetWidth, tag.offsetHeight) / 2, pad = 10, dist = Math.max(len + 16 + half, radius + half * .75);
+  const x = Math.min(Math.max(cx + (tx - cx) / len * dist, tag.offsetWidth / 2 + pad), w - tag.offsetWidth / 2 - pad);
+  const y = Math.min(Math.max(cy + (ty - cy) / len * dist, tag.offsetHeight / 2 + pad), h - tag.offsetHeight / 2 - pad);
+  tag.style.transform = `translate(${x - tag.offsetWidth / 2}px, ${y - tag.offsetHeight / 2}px)`;
+}
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); placeMoveTag(); });
 
 function renderNavigation() {
   $('#lessons').innerHTML = lessons.map((l, i) => `<button class="nav-item ${i === selected ? 'selected' : ''}" data-lesson="${i}"><span class="nav-number ${completed.includes(i) ? 'done' : ''}">${completed.includes(i) ? icon('check') : i === 0 ? icon('box') : `0${i}`}</span><span>${l.title}<small>${i === 0 ? '从这里开始' : l.en}</small></span>${i === selected ? '<span class="nav-current"></span>' : ''}</button>`).join('');
@@ -213,6 +263,12 @@ function renderStep() {
   $('#action-title').textContent = step === lesson.formula.length ? '这组动作，完成了！' : lesson.stepLabels?.[idx] ?? moveText(move);
   $('#action-subtitle').textContent = step === lesson.formula.length ? '再播放一次，或者动手跟练吧' : moveText(move);
   $('#action-arrow').textContent = move.endsWith("'") ? '↺' : '↻';
+  const tag = $('#move-tag'), letter = notation(move);
+  tag.classList.toggle('visible', arrow.visible && step < lesson.formula.length);
+  if ($('#move-tag-letter').textContent !== letter || tag.dataset.step !== String(step)) {
+    $('#move-tag-letter').textContent = letter; $('#move-tag-text').textContent = moveText(move); tag.dataset.step = step;
+    tag.classList.remove('pop'); void tag.offsetWidth; tag.classList.add('pop');
+  }
   syncControls();
   $('#play').innerHTML = icon(playing ? 'pause' : 'play'); $('#play').setAttribute('aria-label', playing ? '暂停' : '播放');
   $('#play').disabled = mode !== 'learn';
@@ -298,7 +354,7 @@ $('#prev').onclick = async () => { if (busy || step === 0 || mode !== 'learn') r
 $('#reset').onclick = () => { if (!busy) { reset(); toast(mode === 'sandbox' ? '已恢复六面复原态' : '已回到本节起始局面'); } };
 $('#speed').onclick = () => { speed = speed === 1 ? 1.5 : speed === 1.5 ? .5 : 1; $('#speed').innerHTML = `${speed}× <span>速度</span>`; };
 $('#focus').onchange = e => { focus = e.target.checked; focusCube(); };
-$('#arrows').onchange = e => { arrows = e.target.checked; focusCube(); };
+$('#arrows').onchange = e => { arrows = e.target.checked; focusCube(); renderStep(); };
 $('#view-reset').onclick = () => { camera.position.set(6.6, 5.1, 7.5); controls.target.set(0, 0, 0); controls.update(); };
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => switchMode(b.dataset.mode));
 $('#sandbox').onclick = () => switchMode(mode === 'sandbox' ? 'learn' : 'sandbox');
@@ -318,7 +374,7 @@ $('#theme').onclick = () => {
   theme = next === (darkQuery.matches ? 'dark' : 'light') ? null : next;
   store.set('cube-theme', theme); retheme();
 };
-function retheme() { applyTheme(); bodyMaterial.color.set(palette.body); arrow.setColor(palette.arrow); focusCube(); }
+function retheme() { applyTheme(); bodyMaterial.color.set(palette.body); arrowMaterial.color.set(palette.arrow); haloMaterial.color.set(palette.arrowHalo); focusCube(); }
 darkQuery.addEventListener('change', () => { if (!theme) retheme(); });
 $('#help').onclick = $('#more-help').onclick = () => $('#help-dialog').showModal();
 $('#close-help').onclick = () => $('#help-dialog').close();
