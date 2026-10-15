@@ -1,7 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createIcons, Box, Sprout, Check, Cloud, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, Mouse, RotateCcw, SkipBack, Play, Pause, SkipForward, Focus, Lightbulb, ArrowRight, Keyboard, Shuffle, Bookmark, X, BookOpen, Moon, Sun } from 'lucide';
+import { createIcons, Box, Sprout, Check, Cloud, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, Mouse, RotateCcw, SkipBack, Play, Pause, SkipForward, Focus, Lightbulb, ArrowRight, Keyboard, Shuffle, Bookmark, X, BookOpen, Moon, Sun, ChevronLeft, ChevronRight, ChevronDown } from 'lucide';
 import { parseMove, rotatePosition, inverse, moveFromDrag, practiceStep } from './cube.js';
 import { lessons, moveText, resolveLesson } from './lessons.js';
 import { evaluateGoal } from './cube-state.js';
@@ -33,6 +33,7 @@ document.querySelector('#app').innerHTML = `
 </aside>
 <div class="main-shell">
   <header><div class="breadcrumb">入门课程 <span>/</span> <b id="crumb"></b></div><div class="header-right"><span>${icon('cloud')} 进度自动保存</span><button class="icon-button" id="theme"></button><button class="icon-button" id="help" title="操作说明" aria-label="操作说明">${icon('circle-help')}</button><div class="avatar">Hi</div></div></header>
+  <div class="lesson-bar"><button class="icon-button" id="lesson-prev" aria-label="上一节">${icon('chevron-left')}</button><button class="lesson-bar-title" id="lesson-open" aria-haspopup="dialog" aria-label="打开课程目录"><span id="lesson-bar-kicker"></span><b><span id="lesson-bar-name"></span>${icon('chevron-down')}</b></button><button class="icon-button" id="lesson-next" aria-label="下一节">${icon('chevron-right')}</button></div>
   <main>
     <section class="page-heading"><div><div class="eyebrow"><span></span> LET’S MAKE IT CLICK</div><h1 id="heading"></h1><p>不用背下来。看一遍，转一遍，手就记住了。</p></div><button id="sandbox" class="outline-button">${icon('blocks')} 自由练习 ${icon('arrow-up-right')}</button></section>
     <div class="workspace">
@@ -46,7 +47,7 @@ document.querySelector('#app').innerHTML = `
     <section class="bottom-grid"><div class="practice-card"><div class="section-title"><span class="section-icon">${icon('keyboard')}</span><div><h3>动手转一下</h3><p id="practice-message" aria-live="polite"></p></div><button id="inverse" class="inverse-button" aria-pressed="false">逆时针 <span>′</span></button></div><div class="move-keys" id="move-keys"></div><div class="key-hint"><span class="keyboard-only"><kbd>Shift</kbd> + 字母 = 逆时针</span><span class="keyboard-only"><kbd>Space</kbd> 播放 / 暂停</span><span class="touch-only">也可以直接在魔方上滑动转层</span><button id="scramble">${icon('shuffle')} 随机打乱</button></div></div><div class="knowledge-card"><div class="knowledge-title">${icon('bookmark')} 新手小贴士 <span>GOOD TO KNOW</span></div><h3>记动作，比记公式更容易。</h3><p id="detail"></p><button id="more-help">认识转动符号 ${icon('arrow-right')}</button></div></section>
     <footer><span>方寸之间，大有可为。</span><span>Made for your first solve <span class="footer-cube">✳</span></span></footer>
   </main>
-</div><div id="toast" role="status"></div><dialog id="help-dialog"><button id="close-help" class="icon-button" aria-label="关闭">${icon('x')}</button><div class="eyebrow">A LITTLE HELP</div><h2>你的魔方，听你的。</h2><p>拖动魔方改变视角，滚轮或双指缩放。在「跟我练习」和「自由练习」中，按住魔方的一面滑动即可转动那一层；拖动魔方外的空白处旋转视角。</p><div class="help-grid"><b>R / L</b><span>右面 / 左面</span><b>U / D</b><span>顶层 / 底层</span><b>F / B</b><span>前面 / 后面</span><b>Shift + 字母</b><span>逆时针转动</span><b>Space</b><span>播放 / 暂停动画</span><b>← / →</b><span>后退 / 前进一步</span></div><p>所有顺逆时针都以正对该面的方向为准。跟练模式会按公式检查每个动作，半转可以连按两次同一个字母；自由练习可以任意转动。</p></dialog>`;
+</div><div id="toast" role="status"></div><dialog id="lesson-sheet" class="sheet" aria-labelledby="sheet-title"><div class="sheet-head"><div><h2 id="sheet-title">课程目录</h2><p id="sheet-progress"></p></div><button class="icon-button" id="close-sheet" aria-label="关闭">${icon('x')}</button></div><nav id="sheet-lessons" aria-label="课程章节"></nav></dialog><dialog id="help-dialog"><button id="close-help" class="icon-button" aria-label="关闭">${icon('x')}</button><div class="eyebrow">A LITTLE HELP</div><h2>你的魔方，听你的。</h2><p>拖动魔方改变视角，滚轮或双指缩放。在「跟我练习」和「自由练习」中，按住魔方的一面滑动即可转动那一层；拖动魔方外的空白处旋转视角。</p><div class="help-grid"><b>R / L</b><span>右面 / 左面</span><b>U / D</b><span>顶层 / 底层</span><b>F / B</b><span>前面 / 后面</span><b>Shift + 字母</b><span>逆时针转动</span><b>Space</b><span>播放 / 暂停动画</span><b>← / →</b><span>后退 / 前进一步</span></div><p>所有顺逆时针都以正对该面的方向为准。跟练模式会按公式检查每个动作，半转可以连按两次同一个字母；自由练习可以任意转动。</p></dialog>`;
 const $ = selector => document.querySelector(selector);
 $('.goal-box').insertAdjacentHTML('afterend', '<div id="goal-status" class="goal-status" role="status" aria-live="polite"></div><div class="case-row"><label for="case-select">练习局面</label><select id="case-select"></select><span id="case-count"></span></div><p id="case-note" class="case-note"></p>');
 // Keep the move pad next to the cube even when a multi-stage lesson is long.
@@ -55,7 +56,7 @@ for (const [className, selectors] of [['cube-column', ['.cube-card', '.practice-
   $('.workspace').append(column); selectors.forEach(selector => column.append($(selector)));
 }
 $('.bottom-grid').remove();
-const refreshIcons = () => createIcons({ icons: { Box, Sprout, Check, Cloud, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, Mouse, RotateCcw, SkipBack, Play, Pause, SkipForward, Focus, Lightbulb, ArrowRight, Keyboard, Shuffle, Bookmark, X, BookOpen, Moon, Sun }, attrs: { 'stroke-width': 1.7 } });
+const refreshIcons = () => createIcons({ icons: { Box, Sprout, Check, Cloud, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, Mouse, RotateCcw, SkipBack, Play, Pause, SkipForward, Focus, Lightbulb, ArrowRight, Keyboard, Shuffle, Bookmark, X, BookOpen, Moon, Sun, ChevronLeft, ChevronRight, ChevronDown }, attrs: { 'stroke-width': 1.7 } });
 
 // Theme: follows the system unless the learner picks the other one; the 3D scene reads its colors from CSS tokens.
 const root = document.documentElement, darkQuery = matchMedia('(prefers-color-scheme: dark)');
@@ -78,6 +79,8 @@ applyTheme();
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(34, 1, .1, 100);
 camera.position.set(6.6, 5.1, 7.5);
+// Layer 1 holds only the turn guide, so it can be drawn in its own pass while a layer turns.
+const GUIDE_LAYER = 1; camera.layers.enable(GUIDE_LAYER);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0x000000, 0);
@@ -182,7 +185,7 @@ function buildArrow(axis, layer, turns, center) {
   const tail = r => new THREE.SphereGeometry(r, 16, 12).translate(...curve.getPoint(0).toArray());
   arrow.children.forEach(m => m.geometry.dispose()); arrow.clear();
   [[new THREE.TubeGeometry(curve, 96, TUBE + HALO, 12), head(HEAD[0] + HALO * 1.6, HEAD[1] + HALO * 3.4, HALO * 1.2), tail(TUBE + HALO)], [new THREE.TubeGeometry(curve, 96, TUBE, 12), head(...HEAD, 0), tail(TUBE)]]
-    .forEach((geos, i) => geos.forEach(g => arrow.add(new THREE.Mesh(g, i ? arrowMaterial : haloMaterial))));
+    .forEach((geos, i) => geos.forEach(g => { const mesh = new THREE.Mesh(g, i ? arrowMaterial : haloMaterial); mesh.layers.set(GUIDE_LAYER); arrow.add(mesh); }));
 }
 const focusTargets = {
   centers: (x, y, z) => Math.abs(x) + Math.abs(y) + Math.abs(z) === 1,
@@ -215,20 +218,25 @@ function updateArrow() {
 async function turn(move, direction = 'forward') {
   if (busy) return false;
   busy = true; activeMove = move; activeDirection = direction; renderStep();
-  const { axis, layer, turns } = parseMove(move), pivot = new THREE.Group(); cubeRoot.add(pivot);
+  const { axis, layer, turns } = parseMove(move), pivot = new THREE.Group(); cubeRoot.add(pivot); turning = pivot;
   const affected = cubies.filter(c => c.userData.pos[axis] === layer);
   affected.forEach(c => pivot.attach(c));
-  const start = performance.now(), duration = (Math.abs(turns) === 2 ? 650 : 470) / speed;
+  // A half turn plays as two separate quarter turns with a short hold between them, so it reads as "turn twice".
+  const beats = Math.abs(turns), sign = Math.sign(turns), beat = 470 / speed, hold = 90 / speed, start = performance.now();
+  const ease = t => t * t * (3 - 2 * t);
+  let shownBeat = -1;
   await new Promise(resolve => {
     function animate(now) {
-      const t = Math.min((now - start) / duration, 1); const eased = t * t * (3 - 2 * t);
-      pivot.rotation[['x', 'y', 'z'][axis]] = turns * Math.PI / 2 * eased;
-      if (t < 1) requestAnimationFrame(animate); else resolve();
+      const elapsed = now - start, index = Math.min(Math.floor(elapsed / (beat + hold)), beats - 1);
+      const local = Math.min((elapsed - index * (beat + hold)) / beat, 1);
+      pivot.rotation[['x', 'y', 'z'][axis]] = sign * (index + ease(local)) * Math.PI / 2;
+      if (beats > 1 && index !== shownBeat) { shownBeat = index; $('#move-tag-text').textContent = `${moveText(move)} · 第 ${index + 1} 次`; }
+      if (index < beats - 1 || local < 1) requestAnimationFrame(animate); else resolve();
     }
     requestAnimationFrame(animate);
   });
   affected.forEach(c => { cubeRoot.attach(c); c.userData.pos = rotatePosition(c.userData.pos, axis, turns); c.position.set(...c.userData.pos); });
-  cubeRoot.remove(pivot); busy = false; activeMove = null; activeDirection = 'forward'; syncControls(); return true;
+  cubeRoot.remove(pivot); turning = null; busy = false; activeMove = null; activeDirection = 'forward'; syncControls(); return true;
 }
 new ResizeObserver(() => { const el = $('#viewport'); camera.aspect = el.clientWidth / el.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(el.clientWidth, el.clientHeight); }).observe($('#viewport'));
 // The move label floats beside the arrowhead, pushed away from the cube's center on screen so it never covers the cube.
@@ -246,15 +254,34 @@ function placeMoveTag() {
   const x = Math.min(Math.max(cx + (tx - cx) / len * dist, tag.offsetWidth / 2 + pad), w - tag.offsetWidth / 2 - pad);
   const y = Math.min(Math.max(cy + (ty - cy) / len * dist, tag.offsetHeight / 2 + pad), h - tag.offsetHeight / 2 - pad);
   tag.style.transform = `translate(${x - tag.offsetWidth / 2}px, ${y - tag.offsetHeight / 2}px)`;
+  el.classList.toggle('tag-low', y + tag.offsetHeight / 2 > h - 44);
 }
-renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); placeMoveTag(); });
+// A turning layer's corners sweep out past the guide's ring and would hide it mid-turn. While a layer turns, the guide
+// is depth-tested only against the layers that stay still: draw the scene, then rebuild depth from the still layers
+// alone, then draw the guide on top of that.
+let turning = null;
+const depthOnly = new THREE.MeshBasicMaterial({ colorWrite: false });
+function renderFrame() {
+  if (!turning || !arrow.visible) { renderer.render(scene, camera); return; }
+  arrow.visible = false; renderer.render(scene, camera);
+  renderer.autoClear = false; renderer.clearDepth();
+  turning.visible = false; scene.overrideMaterial = depthOnly; renderer.render(scene, camera);
+  scene.overrideMaterial = null; turning.visible = true; arrow.visible = true;
+  camera.layers.set(GUIDE_LAYER); renderer.render(scene, camera);
+  camera.layers.enableAll(); renderer.autoClear = true;
+}
+renderer.setAnimationLoop(() => { controls.update(); renderFrame(); placeMoveTag(); });
 
 function renderNavigation() {
-  $('#lessons').innerHTML = lessons.map((l, i) => `<button class="nav-item ${i === selected ? 'selected' : ''}" data-lesson="${i}"><span class="nav-number ${completed.includes(i) ? 'done' : ''}">${completed.includes(i) ? icon('check') : i === 0 ? icon('box') : `0${i}`}</span><span>${l.title}<small>${i === 0 ? '从这里开始' : l.en}</small></span>${i === selected ? '<span class="nav-current"></span>' : ''}</button>`).join('');
-  $('#progress-label').textContent = `${completed.length} / ${lessons.length}`; $('#progress').style.width = `${completed.length / lessons.length * 100}%`; refreshIcons();
-  // Keep the current lesson visible in the horizontal strip on small screens.
-  const nav = $('#lessons'), current = nav.querySelector('.selected');
-  if (nav.scrollWidth > nav.clientWidth) nav.scrollLeft = current.offsetLeft - (nav.clientWidth - current.offsetWidth) / 2;
+  const items = lessons.map((l, i) => `<button class="nav-item ${i === selected ? 'selected' : ''}" data-lesson="${i}" ${i === selected ? 'aria-current="true"' : ''}><span class="nav-number ${completed.includes(i) ? 'done' : ''}">${completed.includes(i) ? icon('check') : i === 0 ? icon('box') : `0${i}`}</span><span>${l.title}<small>${i === 0 ? '从这里开始' : l.en}</small></span>${i === selected ? '<span class="nav-current"></span>' : ''}</button>`).join('');
+  $('#lessons').innerHTML = items; $('#sheet-lessons').innerHTML = items;
+  const progress = `${completed.length} / ${lessons.length}`;
+  $('#progress-label').textContent = progress; $('#progress').style.width = `${completed.length / lessons.length * 100}%`;
+  // Small screens: a sticky bar with previous / next and a sheet listing every lesson.
+  $('#lesson-bar-kicker').textContent = `${lessons[selected].label} · 已完成 ${progress}`; $('#lesson-bar-name').textContent = lessons[selected].title;
+  $('#sheet-progress').textContent = `入门课程 · 已完成 ${progress}`;
+  $('#lesson-prev').disabled = selected === 0; $('#lesson-next').disabled = selected === lessons.length - 1;
+  refreshIcons();
 }
 function syncControls() {
   $('#prev').disabled = busy || step === 0 || mode !== 'learn'; $('#next').disabled = busy || step === lesson.formula.length || mode !== 'learn';
@@ -316,15 +343,16 @@ function renderStep() {
   $('#timeline-fill').style.width = `${step / lesson.formula.length * 100}%`;
   const idx = Math.max(0, Math.min(displayStep, lesson.formula.length - 1)), move = guideMove();
   $('#action-number').textContent = String(idx + 1).padStart(2, '0');
-  $('#action-title').textContent = !move ? '这组动作，完成了！' : activeDirection === 'backward' ? `回退 · ${notation(move)}` : pendingHalf ? '再转一次，完成半转' : lesson.stepLabels?.[idx] ?? moveText(move);
+  $('#action-title').textContent = !move ? '这组动作，完成了！' : activeDirection === 'backward' ? `回退 · ${notation(move)}` : pendingHalf ? '再转一次，完成半转' : lesson.stepLabels?.[idx] ?? `转动 ${notation(move)}`;
   $('#action-subtitle').textContent = move ? moveText(move) : '观察结果，再切换到跟练模式';
   $('#action-arrow').textContent = !move ? '✓' : move.endsWith("'") ? '↺' : '↻';
   const tag = $('#move-tag'), letter = move ? notation(move) : '';
   tag.classList.toggle('visible', arrow.visible);
   if ($('#move-tag-letter').textContent !== letter || tag.dataset.step !== String(displayStep)) {
-    $('#move-tag-letter').textContent = letter; $('#move-tag-text').textContent = move ? moveText(move) : ''; tag.dataset.step = displayStep;
+    $('#move-tag-letter').textContent = letter; tag.dataset.step = displayStep;
     tag.classList.remove('pop'); void tag.offsetWidth; tag.classList.add('pop');
   }
+  $('#move-tag-text').textContent = move ? moveText(move) : ''; // turn() adds the beat count to half turns
   $('#case-note').textContent = lesson.stages?.filter(s => s.start <= displayStep).at(-1)?.text ?? lesson.note;
   renderGoal();
   syncControls();
@@ -407,6 +435,18 @@ let toastTimer;
 function toast(message) { $('#toast').textContent = message; $('#toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('visible'), 3000); }
 $('#move-keys').innerHTML = ['U', 'D', 'L', 'R', 'F', 'B'].map((m, i) => `<button data-move="${m}" aria-label="${['顶层', '底层', '左面', '右面', '前面', '后面'][i]} ${m}"><b>${m}</b><span>${['顶层', '底层', '左面', '右面', '前面', '后面'][i]}</span><small>↻</small></button>`).join('');
 $('#lessons').onclick = e => { const b = e.target.closest('[data-lesson]'); if (b) selectLesson(Number(b.dataset.lesson)); };
+// Lesson changes from the small-screen bar bring the new lesson's intro into view.
+function goToLesson(i) {
+  if (busy || !lessons[i]) return;
+  selectLesson(i); $('#lesson-sheet').close();
+  window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+$('#sheet-lessons').onclick = e => { const b = e.target.closest('[data-lesson]'); if (b) goToLesson(Number(b.dataset.lesson)); };
+$('#lesson-prev').onclick = () => goToLesson(selected - 1);
+$('#lesson-next').onclick = () => goToLesson(selected + 1);
+$('#lesson-open').onclick = () => { $('#lesson-sheet').showModal(); $('#sheet-lessons .selected').scrollIntoView({ block: 'nearest' }); };
+$('#close-sheet').onclick = () => $('#lesson-sheet').close();
+$('#lesson-sheet').onclick = e => { if (e.target === $('#lesson-sheet')) $('#lesson-sheet').close(); };
 $('#play').onclick = playback; $('#next').onclick = next;
 $('#prev').onclick = async () => { if (busy || step === 0 || mode !== 'learn') return; playing = false; playRun++; const token = generation; await turn(inverse(lesson.formula[step - 1]), 'backward'); if (token !== generation) return; step--; renderStep(); };
 $('#reset').onclick = () => { if (!busy) { reset(); toast(mode === 'sandbox' ? '已恢复六面复原态' : '已回到本节起始局面'); } };
@@ -444,7 +484,7 @@ $('#close-help').onclick = () => $('#help-dialog').close();
 $('#help-dialog').onclick = e => { if (e.target === $('#help-dialog')) $('#help-dialog').close(); };
 $('.brand').onclick = e => { e.preventDefault(); selectLesson(0); };
 window.addEventListener('keydown', e => {
-  if ($('#help-dialog').open || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  if (document.querySelector('dialog[open]') || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
   const key = e.key.toUpperCase();
   if ('UDLRFB'.includes(key) && key.length === 1) { e.preventDefault(); requestMove(key + (e.shiftKey || reversed ? "'" : '')); }
   else if (e.code === 'Space' && e.target.tagName !== 'BUTTON') { e.preventDefault(); playback(); }

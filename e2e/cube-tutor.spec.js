@@ -9,7 +9,9 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
 async function selectLesson(page, index, variant = 0) {
-  await page.locator(`[data-lesson="${index}"]`).click();
+  // Wide screens list lessons in the sidebar; small screens pick them from the lesson sheet.
+  if (await page.locator('#lessons').isVisible()) await page.locator(`#lessons [data-lesson="${index}"]`).click();
+  else { await page.locator('#lesson-open').click(); await page.locator(`#sheet-lessons [data-lesson="${index}"]`).click(); }
   await page.locator('#case-select').selectOption(String(variant));
 }
 async function move(page, face, expectedStep) {
@@ -111,4 +113,21 @@ test('mobile practice keeps the cube and touch keys visible without horizontal o
   await page.locator('[data-move="R"]').tap();
   await expect(page.locator('#step-status')).toHaveText('动作 1 / 4');
   await expect(page.locator('#practice-message')).toContainText('请转动 U');
+});
+
+test('mobile lesson bar stays reachable and switches lessons from the sheet', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile');
+  await expect(page.locator('#lessons')).toBeHidden();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(page.locator('.lesson-bar')).toBeInViewport();
+  await page.locator('#lesson-open').tap();
+  await expect(page.locator('#lesson-sheet')).toBeVisible();
+  await page.locator('#sheet-lessons [data-lesson="3"]').tap();
+  await expect(page.locator('#lesson-sheet')).toBeHidden();
+  await expect(page.locator('#lesson-bar-name')).toHaveText('中层棱块');
+  await expect(page.locator('#lesson-title')).toHaveText('中层棱块');
+  await page.locator('#lesson-next').tap();
+  await expect(page.locator('#lesson-bar-name')).toHaveText('顶层黄色十字');
+  await page.locator('#lesson-prev').tap();
+  await expect(page.locator('#lesson-bar-name')).toHaveText('中层棱块');
 });
