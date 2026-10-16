@@ -10,6 +10,8 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@fontsource-variable/noto-sans-sc": "^5.3.1",
+    "@fontsource-variable/outfit": "^5.3.0",
     "lucide": "^0.468.0",
     "three": "^0.180.0"
   },

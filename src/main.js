@@ -1,3 +1,6 @@
+// Fonts ship with the build (split by unicode range, so only the characters in use are downloaded).
+import '@fontsource-variable/noto-sans-sc';
+import '@fontsource-variable/outfit';
 import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';

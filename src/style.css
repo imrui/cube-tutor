@@ -42,7 +42,7 @@
   --shadow-lg:0 24px 60px -12px #000000cc,0 0 0 1px #ffffff14;--shadow-dock:0 -10px 30px #00000080;
   --cube-body:#050506;--cube-dim:#2c2e34;--cube-arrow:#f2f2f3;--cube-arrow-halo:#050506;
 }
-:root{font-family:'Noto Sans SC',sans-serif;font-synthesis:none;font-size:14px;font-weight:400;color:var(--ink);background:var(--bg)}
+:root{font-family:'Noto Sans SC Variable','PingFang SC','Microsoft YaHei',sans-serif;font-synthesis:none;font-size:14px;font-weight:400;color:var(--ink);background:var(--bg)}
 *{box-sizing:border-box}
 body{margin:0}
 button,a,input{-webkit-tap-highlight-color:transparent}
@@ -59,18 +59,18 @@ button:hover:not(:disabled){filter:brightness(.97)}
 .brand{display:flex;gap:11px;align-items:center;padding:0 13px;font-size:24px;font-weight:750;letter-spacing:2px;line-height:1.25}
 .brand-mark{width:42px;height:46px;display:grid;place-items:center;color:var(--ink)}
 .brand-mark svg{width:38px;height:38px;stroke-width:1.5}
-.brand-en{display:block;font:12px 'Outfit',sans-serif;letter-spacing:2px;margin-top:5px;color:var(--text-2)}
+.brand-en{display:block;font:12px 'Outfit Variable',sans-serif;letter-spacing:2px;margin-top:5px;color:var(--text-2)}
 .nav-item{width:100%;text-align:left;display:flex;gap:12px;align-items:center;padding:13px 12px;margin-bottom:7px;border-radius:9px;position:relative;font-size:13px;font-weight:500;color:var(--text-2);min-height:59px}
 .nav-item:hover{background:var(--surface-3)}
 .nav-item.selected{background:var(--surface);box-shadow:var(--shadow-sm);color:var(--ink)}
 .nav-item.selected .nav-number{background:var(--surface-3);color:var(--text-2)}
-.nav-number{font:12px 'Outfit',sans-serif;display:grid;place-items:center;min-width:29px;height:29px;border:1px solid var(--line);border-radius:8px}
+.nav-number{font:12px 'Outfit Variable',sans-serif;display:grid;place-items:center;min-width:29px;height:29px;border:1px solid var(--line);border-radius:8px}
 .nav-number svg{width:15px;height:15px}
 .nav-number.done{color:var(--success);background:var(--success-bg)}
 .nav-current{position:absolute;right:11px;width:5px;height:5px;border-radius:50%;background:var(--ink)}
 .sidebar-bottom{padding:22px 12px;margin-top:auto}
 .progress-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text-3)}
-.progress-label b{font:12px 'Outfit',sans-serif;color:var(--text-2)}
+.progress-label b{font:12px 'Outfit Variable',sans-serif;color:var(--text-2)}
 .progress-track{height:4px;background:var(--surface-3);border-radius:3px;margin-top:9px;overflow:hidden}
 .progress-track span{display:block;height:100%;background:var(--ink);transition:width .4s}
 .main-shell{margin-left:244px}
@@ -99,7 +99,7 @@ h1{font-size:29px;letter-spacing:.4px;font-weight:650;margin:11px 0 10px;line-he
 .view-reset svg{width:14px;height:14px}
 .move-tag{position:absolute;left:0;top:0;z-index:2;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 12px 7px;border:1px solid var(--line);border-radius:12px;background:var(--move-tag-bg);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);box-shadow:var(--shadow-sm);pointer-events:none;opacity:0;transition:opacity .2s}
 .move-tag.visible{opacity:1}
-.move-tag b{font:500 26px/1.1 'Outfit',sans-serif;color:var(--ink);letter-spacing:.5px}
+.move-tag b{font:500 26px/1.1 'Outfit Variable',sans-serif;color:var(--ink);letter-spacing:.5px}
 .move-tag span{font-size:11px;color:var(--text-2);white-space:nowrap}
 .move-tag.pop b{animation:tag-pop .32s ease-out}
 .move-tag.docked{left:50%;top:auto;bottom:10px;transform:translateX(-50%);flex-direction:row;align-items:baseline;gap:8px;padding:5px 14px;border-radius:999px}
@@ -130,13 +130,13 @@ h1{font-size:29px;letter-spacing:.4px;font-weight:650;margin:11px 0 10px;line-he
 .transport-center>.icon-button svg{width:15px;height:15px}
 .play-button{width:42px;height:42px;border-radius:50%;background:var(--ink);color:var(--on-ink);display:grid;place-items:center;box-shadow:var(--shadow-md)}
 .play-button svg{width:17px;height:17px;fill:currentColor;stroke-width:1px}
-.speed-button{display:flex;gap:5px;align-items:center;white-space:nowrap;flex-shrink:0;border:1px solid var(--line);border-radius:5px;padding:5px 8px;font:12px 'Outfit',sans-serif;color:var(--text-2)}
-.speed-button span{font:11px 'Noto Sans SC',sans-serif;color:var(--text-3)}
+.speed-button{display:flex;gap:5px;align-items:center;white-space:nowrap;flex-shrink:0;border:1px solid var(--line);border-radius:5px;padding:5px 8px;font:12px 'Outfit Variable',sans-serif;color:var(--text-2)}
+.speed-button span{font:11px 'Noto Sans SC Variable',sans-serif;color:var(--text-3)}
 .instruction-card{padding:25px 25px 19px;display:flex;flex-direction:column}
 .instruction-card h2{font-size:23px;font-weight:600;letter-spacing:.6px;margin:0}
 .formula{display:grid;grid-template-columns:repeat(auto-fit,minmax(40px,1fr));gap:7px}
-.formula-move{min-width:0;height:54px;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;font:20px 'Outfit',sans-serif;color:var(--text-2);position:relative;padding-bottom:12px}
-.formula-move small{position:absolute;bottom:5px;left:0;right:0;font:11px 'Outfit',sans-serif;color:var(--text-4)}
+.formula-move{min-width:0;height:54px;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;font:20px 'Outfit Variable',sans-serif;color:var(--text-2);position:relative;padding-bottom:12px}
+.formula-move small{position:absolute;bottom:5px;left:0;right:0;font:11px 'Outfit Variable',sans-serif;color:var(--text-4)}
 .formula-move.current{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
 .formula-move.current small{color:var(--on-ink-2)}
 .formula-move.finished{background:var(--success-bg);color:var(--success)}
@@ -146,14 +146,14 @@ h1{font-size:29px;letter-spacing:.4px;font-weight:650;margin:11px 0 10px;line-he
 .section-title{display:flex;align-items:center;gap:9px}
 .section-title p{flex:1;margin:0;color:var(--text-2);font-size:13px;line-height:1.5}
 .inverse-button{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:11px;color:var(--text-3)}
-.inverse-button>span{width:24px;height:22px;border:1px solid var(--line);border-radius:5px;display:grid;place-items:center;font:18px 'Outfit',sans-serif}
+.inverse-button>span{width:24px;height:22px;border:1px solid var(--line);border-radius:5px;display:grid;place-items:center;font:18px 'Outfit Variable',sans-serif}
 .inverse-button.on{color:var(--ink)}
 .inverse-button.on span{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
 .move-keys{display:flex;gap:10px;margin:19px 0 15px}
 .move-keys button{flex:1;display:flex;align-items:center;flex-direction:column;border:1px solid var(--line);border-bottom:3px solid var(--line);position:relative;border-radius:7px;background:var(--surface-2);padding:8px 3px 7px}
 .move-keys button:hover{border-color:var(--line-strong);background:var(--surface-2);transform:translateY(-2px)}
 .move-keys button:active{transform:translateY(1px)}
-.move-keys b{font:21px 'Outfit',sans-serif;color:var(--text-2)}
+.move-keys b{font:21px 'Outfit Variable',sans-serif;color:var(--text-2)}
 .move-keys span{font-size:11px;margin-top:4px;color:var(--text-3)}
 .move-keys small{position:absolute;right:6px;top:5px;font-size:12px;color:var(--text-4)}
 .key-hint{display:flex;align-items:center;gap:17px;color:var(--text-3);font-size:11px}
@@ -167,7 +167,7 @@ dialog h2{font-size:23px;margin:15px 0}
 dialog p{font-size:12px;color:var(--text-3);line-height:1.9}
 #close-help{position:absolute;right:12px;top:12px}
 .help-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin:25px 0;font-size:12px}
-.help-grid b{font-family:'Outfit',sans-serif;font-weight:500}
+.help-grid b{font-family:'Outfit Variable',sans-serif;font-weight:500}
 .help-grid span{color:var(--text-3)}
 .sandbox-active{background:var(--surface-3);border-color:var(--line-strong)}
 .shake{animation:shake .3s;border-radius:6px;outline:2px solid var(--danger)}
@@ -352,7 +352,7 @@ h1{margin:0}
 #lesson-kicker{font-size:12px;color:var(--text-3);white-space:nowrap}
 .goal-line{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);font-size:13px;line-height:1.5;color:var(--text-2)}
 .goal-line b{font-weight:500;color:var(--ink)}
-.goal-line .goal-status{flex-shrink:0;margin:0;padding:3px 9px;border:0;border-radius:999px;background:var(--surface-3);font:500 12px/1.5 'Outfit','Noto Sans SC',sans-serif;color:var(--text-2);white-space:nowrap}
+.goal-line .goal-status{flex-shrink:0;margin:0;padding:3px 9px;border:0;border-radius:999px;background:var(--surface-3);font:500 12px/1.5 'Outfit Variable','Noto Sans SC Variable',sans-serif;color:var(--text-2);white-space:nowrap}
 .goal-line .goal-status.passed{background:var(--success-bg);color:var(--success)}
 .case-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
 .case-chip{display:inline-flex;align-items:center;gap:4px;min-height:32px;padding:5px 12px;border:1px solid var(--line-strong);border-radius:999px;background:var(--surface);font-size:12px;color:var(--text-2)}
