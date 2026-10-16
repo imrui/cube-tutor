@@ -130,7 +130,7 @@ h1{font-size:29px;letter-spacing:.4px;font-weight:650;margin:11px 0 10px;line-he
 .transport-center>.icon-button svg{width:15px;height:15px}
 .play-button{width:42px;height:42px;border-radius:50%;background:var(--ink);color:var(--on-ink);display:grid;place-items:center;box-shadow:var(--shadow-md)}
 .play-button svg{width:17px;height:17px;fill:currentColor;stroke-width:1px}
-.speed-button{display:flex;gap:5px;align-items:center;border:1px solid var(--line);border-radius:5px;padding:5px 8px;font:12px 'Outfit',sans-serif;color:var(--text-2)}
+.speed-button{display:flex;gap:5px;align-items:center;white-space:nowrap;flex-shrink:0;border:1px solid var(--line);border-radius:5px;padding:5px 8px;font:12px 'Outfit',sans-serif;color:var(--text-2)}
 .speed-button span{font:11px 'Noto Sans SC',sans-serif;color:var(--text-3)}
 .instruction-card{padding:25px 25px 19px;display:flex;flex-direction:column}
 .instruction-card h2{font-size:23px;font-weight:600;letter-spacing:.6px;margin:0}
@@ -388,4 +388,13 @@ h1{margin:0}
   .mode-tabs{width:100%}
   .mode-tabs button{flex:1;justify-content:center;padding:8px 4px;font-size:12px}
   .cube-card,.page-heading{scroll-margin-top:60px}
+}
+/* Phones: speed moves to the switch row; reset and play keep the transport row, with play centered. */
+@media(max-width:620px){
+  .cube-options{gap:14px;padding:0 14px}
+  .cube-options label{gap:6px;white-space:nowrap}
+  .cube-options #speed{margin-left:auto;min-width:48px;justify-content:center;padding:7px 10px}
+  .cube-options #speed span{display:none}
+  .transport{display:grid;grid-template-columns:44px 1fr 44px}
+  .transport-center{margin-left:0;justify-content:center}
 }
