@@ -12,7 +12,7 @@ async function selectLesson(page, index, variant = 0) {
   // Wide screens list lessons in the sidebar; small screens pick them from the lesson sheet.
   if (await page.locator('#lessons').isVisible()) await page.locator(`#lessons [data-lesson="${index}"]`).click();
   else { await page.locator('#lesson-open').click(); await page.locator(`#sheet-lessons [data-lesson="${index}"]`).click(); }
-  await page.locator('#case-select').selectOption(String(variant));
+  if (variant) await page.locator(`[data-case="${variant}"]`).click();
 }
 async function move(page, face, expectedStep) {
   await page.locator(`[data-move="${face}"]`).click();
@@ -32,7 +32,7 @@ test('play, pause, previous and finish keep guidance aligned with the actual tur
   await expect(page.locator('#viewport')).toHaveAttribute('data-guide-move', 'U');
   await page.locator('#prev').click();
   await expect(page.locator('#move-tag-letter')).toHaveText('R′');
-  await expect(page.locator('#action-subtitle')).toHaveText('右面逆时针转 90°');
+  await expect(page.locator('#move-tag-text')).toHaveText('右面逆时针转 90°');
   await expect(page.locator('#viewport')).toHaveAttribute('data-guide-move', "R'");
   await expect(page.locator('#step-status')).toHaveText('动作 0 / 4');
   await page.locator('#speed').click(); await page.locator('#speed').click();
@@ -43,7 +43,7 @@ test('play, pause, previous and finish keep guidance aligned with the actual tur
   await expect(page.locator('#viewport')).toHaveAttribute('data-guide-move', '');
   await page.locator('#theme').click(); // Retheming must not bring the finished arrow back.
   await expect(page.locator('#viewport')).toHaveAttribute('data-guide-move', '');
-  await expect(page.locator('#case-count')).toHaveText('0 / 3 已跟练');
+  await expect(page.locator('.case-chip.passed')).toHaveCount(0);
 });
 
 test('half-turn practice rejects wrong moves, supports undo and validates a real cross', async ({ page }) => {
@@ -62,16 +62,16 @@ test('half-turn practice rejects wrong moves, supports undo and validates a real
     await expect(page.locator('#viewport')).toHaveAttribute('data-guide-move', `${face}'`);
     await move(page, face, `动作 ${i + 1} / 4`);
   }
-  await expect(page.locator('#goal-status')).toContainText('跟练通过');
-  await expect(page.locator('#case-count')).toHaveText('1 / 2 已跟练');
+  await expect(page.locator('#goal-status')).toHaveText('✓ 已达成');
+  await expect(page.locator('.case-chip.passed')).toHaveCount(1);
   await page.reload();
-  await expect(page.locator('#case-count')).toHaveText('1 / 2 已跟练');
-  await page.locator('#case-select').selectOption('1');
+  await expect(page.locator('.case-chip.passed')).toHaveCount(1);
+  await page.locator('[data-case="1"]').click();
   await page.locator('[data-mode="practice"]').click();
   await move(page, 'U', '动作 1 / 2');
   await move(page, 'F', '动作 1 / 2');
   await move(page, 'F', '动作 2 / 2');
-  await expect(page.locator('#case-count')).toHaveText('2 / 2 已跟练');
+  await expect(page.locator('.case-chip.passed')).toHaveCount(2);
   await expect(page.locator('#progress-label')).toHaveText('1 / 8');
 });
 
@@ -81,11 +81,11 @@ test('each lesson variant switches its formula and goal, without marking a visit
   await expect(page.locator('#goal-status')).toContainText('11 / 12');
   await page.locator('#speed').click(); await page.locator('#play').click();
   await expect(page.locator('#goal-status')).toHaveAttribute('data-met', 'true');
-  await expect(page.locator('#case-count')).toHaveText('0 / 2 已跟练');
+  await expect(page.locator('.case-chip.passed')).toHaveCount(0);
   await page.locator('#complete').click();
   await expect(page.locator('#lesson-title')).toHaveText('顶层黄色十字');
   await expect(page.locator('#progress-label')).toHaveText('0 / 8');
-  await page.locator('#case-select').selectOption('2');
+  await page.locator('[data-case="2"]').click();
   await expect(page.locator('#goal-status')).toContainText('0 / 4');
   await expect(page.locator('#formula button')).toHaveCount(19);
   await expect(page.locator('#case-note')).toContainText('点态');
@@ -130,4 +130,16 @@ test('mobile lesson bar stays reachable and switches lessons from the sheet', as
   await expect(page.locator('#lesson-bar-name')).toHaveText('顶层黄色十字');
   await page.locator('#lesson-prev').tap();
   await expect(page.locator('#lesson-bar-name')).toHaveText('中层棱块');
+});
+
+test('the lesson card keeps one goal line and folds the longer explanations', async ({ page }) => {
+  await selectLesson(page, 2, 1);
+  await expect(page.locator('#goal')).toHaveText('将白色角块送回右下角');
+  await expect(page.locator('[data-case="1"]')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('#lesson-desc')).toBeHidden();
+  await page.locator('#lesson-more summary').click();
+  await expect(page.locator('#lesson-desc')).toBeVisible();
+  await expect(page.locator('#move-tag-text')).toHaveText('右手抬起 · 右面顺时针转 90°');
+  await selectLesson(page, 0);
+  await expect(page.locator('#case-chips')).toBeHidden();
 });

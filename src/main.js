@@ -1,7 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createIcons, Box, Sprout, Check, Cloud, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, Mouse, RotateCcw, SkipBack, Play, Pause, SkipForward, Focus, Lightbulb, ArrowRight, Keyboard, Shuffle, Bookmark, X, BookOpen, Moon, Sun, ChevronLeft, ChevronRight, ChevronDown } from 'lucide';
+import { createIcons, Box, Check, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, RotateCcw, SkipBack, Play, Pause, SkipForward, ArrowRight, Shuffle, X, BookOpen, Moon, Sun, ChevronLeft, ChevronRight, ChevronDown } from 'lucide';
 import { parseMove, rotatePosition, inverse, moveFromDrag, practiceStep } from './cube.js';
 import { lessons, moveText, resolveLesson } from './lessons.js';
 import { evaluateGoal } from './cube-state.js';
@@ -26,37 +26,44 @@ let lesson = resolveLesson(selected);
 document.querySelector('#app').innerHTML = `
 <aside class="sidebar">
   <a class="brand" href="#" aria-label="方寸首页"><span class="brand-mark">${icon('box')}</span><span>方寸<span class="brand-en">CUBE TUTOR</span></span></a>
-  <div class="course-label">你的第一颗魔方 <span>入门课程</span></div>
   <nav id="lessons" aria-label="课程章节"></nav>
-  <div class="sidebar-bottom"><div class="little-cube">${icon('sprout')}</div><h4>慢慢来，比较快。</h4><p>每一个高手，都从第一次转动开始。</p><div class="progress-label"><span>学习进度</span><b id="progress-label"></b></div><div class="progress-track"><span id="progress"></span></div></div>
-  <div class="sidebar-footer"><span class="status-dot"></span>为每一个「我不会」而设计</div>
+  <div class="sidebar-bottom"><div class="progress-label"><span>学习进度</span><b id="progress-label"></b></div><div class="progress-track"><span id="progress"></span></div></div>
 </aside>
 <div class="main-shell">
-  <header><div class="breadcrumb">入门课程 <span>/</span> <b id="crumb"></b></div><div class="header-right"><span>${icon('cloud')} 进度自动保存</span><button class="icon-button" id="theme"></button><button class="icon-button" id="help" title="操作说明" aria-label="操作说明">${icon('circle-help')}</button><div class="avatar">Hi</div></div></header>
   <div class="lesson-bar"><button class="icon-button" id="lesson-prev" aria-label="上一节">${icon('chevron-left')}</button><button class="lesson-bar-title" id="lesson-open" aria-haspopup="dialog" aria-label="打开课程目录"><span id="lesson-bar-kicker"></span><b><span id="lesson-bar-name"></span>${icon('chevron-down')}</b></button><button class="icon-button" id="lesson-next" aria-label="下一节">${icon('chevron-right')}</button></div>
   <main>
-    <section class="page-heading"><div><div class="eyebrow"><span></span> LET’S MAKE IT CLICK</div><h1 id="heading"></h1><p>不用背下来。看一遍，转一遍，手就记住了。</p></div><button id="sandbox" class="outline-button">${icon('blocks')} 自由练习 ${icon('arrow-up-right')}</button></section>
+    <section class="page-heading"><h1 id="heading"></h1><div class="heading-actions"><button id="sandbox" class="outline-button"></button><button class="icon-button" id="theme"></button><button class="icon-button" id="help" title="使用帮助" aria-label="使用帮助">${icon('circle-help')}</button></div></section>
     <div class="workspace">
-      <section class="cube-card"><div class="cube-top"><div class="mode-tabs"><button data-mode="learn" class="active">${icon('play-circle')} 动画教学</button><button data-mode="practice">${icon('hand')} 跟我练习</button></div><span class="live-badge"><span></span> 3D 实时演示</span></div>
-        <div class="viewport" id="viewport"><div class="view-label"><span class="view-dot"></span><span id="view-label">白色底面 · 黄色朝上</span></div><button class="view-reset icon-button" id="view-reset" title="恢复默认视角" aria-label="恢复默认视角">${icon('scan')}</button><div class="move-tag" id="move-tag" aria-hidden="true"><b id="move-tag-letter"></b><span id="move-tag-text"></span></div><div class="drag-hint">${icon('move')} <span id="drag-hint"></span></div><div class="axis"><b class="axis-y">Y</b><b class="axis-z">Z</b><b class="axis-x">X</b><span></span></div></div>
-        <div class="cube-options"><label><input id="focus" type="checkbox"/><span class="switch"></span> 聚焦目标块</label><label><input id="arrows" type="checkbox" checked/><span class="switch"></span> 转动指引</label><span class="orientation">${icon(coarse ? 'hand' : 'mouse')} ${coarse ? '双指缩放' : '滚轮缩放'}</span></div>
-        <div class="playback"><div class="timeline"><span id="step-status">动作 0 / 4</span><div class="timeline-track"><span id="timeline-fill"></span></div><span id="duration">右手四步法</span></div><div class="transport"><button id="reset" class="icon-button" title="重置本节" aria-label="重置">${icon('rotate-ccw')}</button><div class="transport-center"><button id="prev" class="icon-button" title="上一步" aria-label="上一步">${icon('skip-back')}</button><button id="play" class="play-button" title="播放或暂停" aria-label="播放">${icon('play')}</button><button id="next" class="icon-button" title="下一步" aria-label="下一步">${icon('skip-forward')}</button></div><button id="speed" class="speed-button" title="切换播放速度">1× <span>速度</span></button></div></div>
-      </section>
-      <aside class="instruction-card"><div class="lesson-kicker" id="lesson-kicker"></div><h2 id="lesson-title"></h2><p id="lesson-desc" class="lesson-desc"></p><div class="goal-box">${icon('focus')}<div><span>这一节的小目标</span><strong id="goal"></strong></div></div><div class="formula-heading"><h3 id="formula-title">右手四步法</h3><span>跟着做就好</span></div><div id="formula" class="formula"></div><div class="action-detail"><span class="step-number" id="action-number">01</span><div><strong id="action-title">右手抬起</strong><span id="action-subtitle">右面顺时针转 90°</span></div><span class="action-arrow" id="action-arrow">↻</span></div><div class="coach-note">${icon('lightbulb')}<p id="tip"></p></div><button id="complete" class="complete-button">我学会了，下一节 ${icon('arrow-right')}</button><div class="no-rush">不着急，随时可以回来再练一次</div></aside>
+      <div class="cube-column">
+        <section class="cube-card"><div class="cube-top"><div class="mode-tabs"><button data-mode="learn" class="active">${icon('play-circle')} 动画教学</button><button data-mode="practice">${icon('hand')} 跟我练习</button></div></div>
+          <div class="viewport" id="viewport"><div class="view-label"><span class="view-dot"></span><span id="view-label">白色底面 · 黄色朝上</span></div><button class="view-reset icon-button" id="view-reset" title="恢复默认视角" aria-label="恢复默认视角">${icon('scan')}</button><div class="move-tag" id="move-tag" aria-hidden="true"><b id="move-tag-letter"></b><span id="move-tag-text"></span></div><div class="drag-hint">${icon('move')} <span id="drag-hint"></span></div></div>
+          <div class="cube-options"><label><input id="focus" type="checkbox"/><span class="switch"></span> 聚焦目标块</label><label><input id="arrows" type="checkbox" checked/><span class="switch"></span> 转动指引</label></div>
+          <div class="playback"><div class="timeline"><span id="step-status">动作 0 / 4</span><div class="timeline-track"><span id="timeline-fill"></span></div></div><div class="transport"><button id="reset" class="icon-button" title="重置本节" aria-label="重置">${icon('rotate-ccw')}</button><div class="transport-center"><button id="prev" class="icon-button" title="上一步" aria-label="上一步">${icon('skip-back')}</button><button id="play" class="play-button" title="播放或暂停" aria-label="播放">${icon('play')}</button><button id="next" class="icon-button" title="下一步" aria-label="下一步">${icon('skip-forward')}</button></div><button id="speed" class="speed-button" title="切换播放速度">1× <span>速度</span></button></div></div>
+        </section>
+        <section class="practice-card"><div class="section-title"><p id="practice-message" aria-live="polite"></p><button id="inverse" class="inverse-button" aria-pressed="false">逆时针 <span>′</span></button></div><div class="move-keys" id="move-keys"></div><div class="key-hint"><button id="scramble">${icon('shuffle')} 随机打乱</button></div></section>
+      </div>
+      <div class="lesson-column">
+        <aside class="instruction-card">
+          <div class="lesson-head"><h2 id="lesson-title"></h2><span id="lesson-kicker"></span></div>
+          <div class="goal-line"><span class="goal-text">目标：<b id="goal"></b></span><span id="goal-status" class="goal-status" role="status" aria-live="polite"></span></div>
+          <div class="case-chips" id="case-chips" role="radiogroup" aria-label="练习局面"></div>
+          <p id="case-note" class="case-note"></p>
+          <h3 id="formula-title" class="formula-title"></h3>
+          <div id="formula" class="formula"></div>
+          <details class="lesson-more" id="lesson-more"><summary>本节讲解与技巧 ${icon('chevron-down')}</summary><p id="lesson-desc"></p><p id="tip"></p><p id="detail"></p><button id="more-help">认识转动符号 ${icon('arrow-right')}</button></details>
+          <button id="complete" class="complete-button"></button>
+        </aside>
+      </div>
     </div>
-    <section class="bottom-grid"><div class="practice-card"><div class="section-title"><span class="section-icon">${icon('keyboard')}</span><div><h3>动手转一下</h3><p id="practice-message" aria-live="polite"></p></div><button id="inverse" class="inverse-button" aria-pressed="false">逆时针 <span>′</span></button></div><div class="move-keys" id="move-keys"></div><div class="key-hint"><span class="keyboard-only"><kbd>Shift</kbd> + 字母 = 逆时针</span><span class="keyboard-only"><kbd>Space</kbd> 播放 / 暂停</span><span class="touch-only">也可以直接在魔方上滑动转层</span><button id="scramble">${icon('shuffle')} 随机打乱</button></div></div><div class="knowledge-card"><div class="knowledge-title">${icon('bookmark')} 新手小贴士 <span>GOOD TO KNOW</span></div><h3>记动作，比记公式更容易。</h3><p id="detail"></p><button id="more-help">认识转动符号 ${icon('arrow-right')}</button></div></section>
-    <footer><span>方寸之间，大有可为。</span><span>Made for your first solve <span class="footer-cube">✳</span></span></footer>
   </main>
-</div><div id="toast" role="status"></div><dialog id="lesson-sheet" class="sheet" aria-labelledby="sheet-title"><div class="sheet-head"><div><h2 id="sheet-title">课程目录</h2><p id="sheet-progress"></p></div><button class="icon-button" id="close-sheet" aria-label="关闭">${icon('x')}</button></div><nav id="sheet-lessons" aria-label="课程章节"></nav></dialog><dialog id="help-dialog"><button id="close-help" class="icon-button" aria-label="关闭">${icon('x')}</button><div class="eyebrow">A LITTLE HELP</div><h2>你的魔方，听你的。</h2><p>拖动魔方改变视角，滚轮或双指缩放。在「跟我练习」和「自由练习」中，按住魔方的一面滑动即可转动那一层；拖动魔方外的空白处旋转视角。</p><div class="help-grid"><b>R / L</b><span>右面 / 左面</span><b>U / D</b><span>顶层 / 底层</span><b>F / B</b><span>前面 / 后面</span><b>Shift + 字母</b><span>逆时针转动</span><b>Space</b><span>播放 / 暂停动画</span><b>← / →</b><span>后退 / 前进一步</span></div><p>所有顺逆时针都以正对该面的方向为准。跟练模式会按公式检查每个动作，半转可以连按两次同一个字母；自由练习可以任意转动。</p></dialog>`;
+</div><div id="toast" role="status"></div><dialog id="lesson-sheet" class="sheet" aria-labelledby="sheet-title"><div class="sheet-head"><div><h2 id="sheet-title">课程目录</h2><p id="sheet-progress"></p></div><button class="icon-button" id="close-sheet" aria-label="关闭">${icon('x')}</button></div><nav id="sheet-lessons" aria-label="课程章节"></nav></dialog><dialog id="help-dialog" aria-labelledby="help-title"><button id="close-help" class="icon-button" aria-label="关闭">${icon('x')}</button><h2 id="help-title">使用帮助</h2>
+  <h3>看和转</h3><p>拖动魔方改变视角，滚轮或双指缩放。在「跟我练习」和「自由练习」中，按住魔方的一面滑动即可转动那一层；拖动魔方外的空白处旋转视角。</p>
+  <h3>转动符号</h3><div class="help-grid"><b>R / L</b><span>右面 / 左面</span><b>U / D</b><span>顶层 / 底层</span><b>F / B</b><span>前面 / 后面</span><b>R′</b><span>带 ′ 表示逆时针</span><b>R2</b><span>转 180°，即同一面转两次</span></div><p>顺时针、逆时针都以正对该面的方向为准。</p>
+  <h3 class="keyboard-only">键盘</h3><div class="help-grid keyboard-only"><b>U D L R F B</b><span>转动对应的面</span><b>Shift + 字母</b><span>逆时针转动</span><b>Space</b><span>播放 / 暂停动画</span><b>← / →</b><span>后退 / 前进一步</span></div>
+  <h3>进度</h3><p>在「跟我练习」中做完动作并达成目标，会自动记录这个局面；一节的所有局面都通过，这一节就完成了。进度只保存在本机浏览器。</p>
+</dialog>`;
 const $ = selector => document.querySelector(selector);
-$('.goal-box').insertAdjacentHTML('afterend', '<div id="goal-status" class="goal-status" role="status" aria-live="polite"></div><div class="case-row"><label for="case-select">练习局面</label><select id="case-select"></select><span id="case-count"></span></div><p id="case-note" class="case-note"></p>');
-// Keep the move pad next to the cube even when a multi-stage lesson is long.
-for (const [className, selectors] of [['cube-column', ['.cube-card', '.practice-card']], ['lesson-column', ['.instruction-card', '.knowledge-card']]]) {
-  const column = document.createElement('div'); column.className = className;
-  $('.workspace').append(column); selectors.forEach(selector => column.append($(selector)));
-}
-$('.bottom-grid').remove();
-const refreshIcons = () => createIcons({ icons: { Box, Sprout, Check, Cloud, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, Mouse, RotateCcw, SkipBack, Play, Pause, SkipForward, Focus, Lightbulb, ArrowRight, Keyboard, Shuffle, Bookmark, X, BookOpen, Moon, Sun, ChevronLeft, ChevronRight, ChevronDown }, attrs: { 'stroke-width': 1.7 } });
+const refreshIcons = () => createIcons({ icons: { Box, Check, CircleHelp, Blocks, ArrowUpRight, PlayCircle, Hand, Scan, Move, RotateCcw, SkipBack, Play, Pause, SkipForward, ArrowRight, Shuffle, X, BookOpen, Moon, Sun, ChevronLeft, ChevronRight, ChevronDown }, attrs: { 'stroke-width': 1.7 } });
 
 // Theme: follows the system unless the learner picks the other one; the 3D scene reads its colors from CSS tokens.
 const root = document.documentElement, darkQuery = matchMedia('(prefers-color-scheme: dark)');
@@ -110,7 +117,7 @@ renderer.domElement.addEventListener('pointermove', e => {
   if (!point || point.distanceTo(swipe.start) < .4) return;
   swipe.done = true;
   const move = moveFromDrag(swipe.normal, point.sub(swipe.start).toArray(), swipe.pos);
-  if (move) requestMove(move); else toast('中间层暂不支持滑动，请滑动外侧的一层');
+  if (move) { requestMove(move); markHintSeen('swipe'); } else toast('中间层暂不支持滑动，请滑动外侧的一层');
 });
 const endSwipe = e => { if (swipe && e.pointerId === swipe.id) { swipe = null; controls.enabled = true; } };
 renderer.domElement.addEventListener('pointerup', endSwipe);
@@ -254,7 +261,12 @@ function placeMoveTag() {
   const x = Math.min(Math.max(cx + (tx - cx) / len * dist, tag.offsetWidth / 2 + pad), w - tag.offsetWidth / 2 - pad);
   const y = Math.min(Math.max(cy + (ty - cy) / len * dist, tag.offsetHeight / 2 + pad), h - tag.offsetHeight / 2 - pad);
   tag.style.transform = `translate(${x - tag.offsetWidth / 2}px, ${y - tag.offsetHeight / 2}px)`;
-  el.classList.toggle('tag-low', y + tag.offsetHeight / 2 > h - 44);
+  // Hide the first-use hint while the label sits on top of it.
+  const hint = $('.drag-hint');
+  if (!hint.hidden) {
+    const a = tag.getBoundingClientRect(), b = hint.getBoundingClientRect();
+    el.classList.toggle('tag-low', a.left < b.right + 8 && b.left < a.right + 8 && a.top < b.bottom + 8 && b.top < a.bottom + 8);
+  }
 }
 // A turning layer's corners sweep out past the guide's ring and would hide it mid-turn. While a layer turns, the guide
 // is depth-tested only against the layers that stay still: draw the scene, then rebuild depth from the still layers
@@ -273,7 +285,7 @@ function renderFrame() {
 renderer.setAnimationLoop(() => { controls.update(); renderFrame(); placeMoveTag(); });
 
 function renderNavigation() {
-  const items = lessons.map((l, i) => `<button class="nav-item ${i === selected ? 'selected' : ''}" data-lesson="${i}" ${i === selected ? 'aria-current="true"' : ''}><span class="nav-number ${completed.includes(i) ? 'done' : ''}">${completed.includes(i) ? icon('check') : i === 0 ? icon('box') : `0${i}`}</span><span>${l.title}<small>${i === 0 ? '从这里开始' : l.en}</small></span>${i === selected ? '<span class="nav-current"></span>' : ''}</button>`).join('');
+  const items = lessons.map((l, i) => `<button class="nav-item ${i === selected ? 'selected' : ''}" data-lesson="${i}" ${i === selected ? 'aria-current="true"' : ''}><span class="nav-number ${completed.includes(i) ? 'done' : ''}">${completed.includes(i) ? icon('check') : i === 0 ? icon('box') : `0${i}`}</span><span>${l.title}</span>${i === selected ? '<span class="nav-current"></span>' : ''}</button>`).join('');
   $('#lessons').innerHTML = items; $('#sheet-lessons').innerHTML = items;
   const progress = `${completed.length} / ${lessons.length}`;
   $('#progress-label').textContent = progress; $('#progress').style.width = `${completed.length / lessons.length * 100}%`;
@@ -286,7 +298,7 @@ function renderNavigation() {
 function syncControls() {
   $('#prev').disabled = busy || step === 0 || mode !== 'learn'; $('#next').disabled = busy || step === lesson.formula.length || mode !== 'learn';
   $('#reset').disabled = busy;
-  $('#case-select').disabled = busy;
+  document.querySelectorAll('[data-case]').forEach(b => { b.disabled = busy; });
 }
 function readCubeState() {
   cubeRoot.updateMatrixWorld(true);
@@ -300,10 +312,15 @@ function readCubeState() {
   }));
 }
 const caseKey = () => `${selected}:${lesson.id}`;
+// Lessons with several starting cases show them as chips; a check marks cases already passed in practice.
 function renderCases() {
-  $('#case-select').innerHTML = lessons[selected].cases.map((c, i) => `<option value="${i}" ${i === caseIndex ? 'selected' : ''}>${passedCases.has(`${selected}:${c.id}`) ? '✓ ' : ''}${c.name}</option>`).join('');
-  const count = lessons[selected].cases.filter(c => passedCases.has(`${selected}:${c.id}`)).length;
-  $('#case-count').textContent = `${count} / ${lessons[selected].cases.length} 已跟练`;
+  const cases = lessons[selected].cases;
+  $('#case-chips').hidden = cases.length < 2;
+  $('#case-chips').innerHTML = cases.map((c, i) => {
+    const passed = passedCases.has(`${selected}:${c.id}`);
+    return `<button class="case-chip ${i === caseIndex ? 'active' : ''} ${passed ? 'passed' : ''}" data-case="${i}" role="radio" aria-checked="${i === caseIndex}" ${passed ? 'title="已跟练通过"' : ''}>${passed ? icon('check') : ''}${c.name}</button>`;
+  }).join('');
+  refreshIcons();
 }
 function renderGoal() {
   if (busy) return;
@@ -311,14 +328,17 @@ function renderGoal() {
   if (mode === 'sandbox') {
     const result = evaluateGoal(readCubeState(), 'solved');
     status.dataset.met = String(result.achieved); status.classList.toggle('passed', result.achieved);
-    status.textContent = result.achieved ? '六面已还原，可以开始新的挑战。' : `自由探索中 · ${result.correct} / ${result.total} 块归位`;
+    $('#goal').textContent = '还原六面';
+    status.textContent = result.achieved ? '✓ 已还原' : `${result.correct} / ${result.total}`; status.title = result.achieved ? '' : `${result.correct} / ${result.total} 块归位`;
     return;
   }
   const result = evaluateGoal(readCubeState(), lesson.goalType, { step, totalSteps: lesson.formula.length });
   const finished = step === lesson.formula.length && !pendingHalf;
   const passed = finished && result.achieved;
   status.dataset.met = String(passed); status.classList.toggle('passed', passed);
-  status.textContent = passed ? (mode === 'practice' ? '✓ 目标已达成，本局面跟练通过！' : '✓ 演示目标已达成，切换到「跟我练习」试试看。') : `${result.label} ${result.correct} / ${result.total}${result.prerequisite ? '' : ' · 还需保持已完成的层'}${finished ? ' · 目标尚未达成，请重置再练' : ''}`;
+  $('#goal').textContent = lesson.goal;
+  status.textContent = passed ? '✓ 已达成' : !result.prerequisite ? '需保持已完成的层' : finished ? '未达成，请重置' : `${result.correct} / ${result.total}`;
+  status.title = `${result.label} ${result.correct} / ${result.total}`;
   if (passed && mode === 'practice' && !passedCases.has(caseKey())) {
     passedCases.add(caseKey()); store.set('cube-passed-cases', [...passedCases]);
     if (lessons[selected].cases.every(c => passedCases.has(`${selected}:${c.id}`)) && !completed.includes(selected)) {
@@ -329,7 +349,7 @@ function renderGoal() {
 }
 const notation = move => move.replace("'", '′');
 function practicePrompt() {
-  if (step === lesson.formula.length) return $('#goal-status').dataset.met === 'true' ? '做到了！目标已达成，可切换局面继续练习。' : '动作已做完，但目标未达成。请重置后再练。';
+  if (step === lesson.formula.length) return $('#goal-status').dataset.met === 'true' ? '做到了！目标已达成，本局面已记录。' : '动作已做完，但目标未达成。请重置后再练。';
   const move = lesson.formula[step];
   if (pendingHalf) return `很好，再转一次 ${notation(pendingHalf)}，完成 180° 半转。`;
   return `轮到你了：请转动 ${notation(move)} · ${moveText(move)}${move.endsWith('2') ? '（连转两次同一面）' : ''}`;
@@ -342,17 +362,14 @@ function renderStep() {
   $('#step-status').textContent = `动作 ${step} / ${lesson.formula.length}`;
   $('#timeline-fill').style.width = `${step / lesson.formula.length * 100}%`;
   const idx = Math.max(0, Math.min(displayStep, lesson.formula.length - 1)), move = guideMove();
-  $('#action-number').textContent = String(idx + 1).padStart(2, '0');
-  $('#action-title').textContent = !move ? '这组动作，完成了！' : activeDirection === 'backward' ? `回退 · ${notation(move)}` : pendingHalf ? '再转一次，完成半转' : lesson.stepLabels?.[idx] ?? `转动 ${notation(move)}`;
-  $('#action-subtitle').textContent = move ? moveText(move) : '观察结果，再切换到跟练模式';
-  $('#action-arrow').textContent = !move ? '✓' : move.endsWith("'") ? '↺' : '↻';
+  const label = activeDirection === 'backward' || pendingHalf ? null : lesson.stepLabels?.[idx];
   const tag = $('#move-tag'), letter = move ? notation(move) : '';
   tag.classList.toggle('visible', arrow.visible);
   if ($('#move-tag-letter').textContent !== letter || tag.dataset.step !== String(displayStep)) {
     $('#move-tag-letter').textContent = letter; tag.dataset.step = displayStep;
     tag.classList.remove('pop'); void tag.offsetWidth; tag.classList.add('pop');
   }
-  $('#move-tag-text').textContent = move ? moveText(move) : ''; // turn() adds the beat count to half turns
+  $('#move-tag-text').textContent = move ? (label ? `${label} · ${moveText(move)}` : moveText(move)) : ''; // turn() adds the beat count to half turns
   $('#case-note').textContent = lesson.stages?.filter(s => s.start <= displayStep).at(-1)?.text ?? lesson.note;
   renderGoal();
   syncControls();
@@ -369,14 +386,12 @@ function reset() {
 function selectLesson(i, nextCase = 0) {
   if (busy) return;
   selected = i; caseIndex = nextCase; lesson = resolveLesson(i, caseIndex); store.set('cube-lesson', i); mode = 'learn';
-  $('#crumb').textContent = `${lesson.label} · ${lesson.title}`; $('#heading').textContent = lesson.intro;
-  $('#lesson-kicker').innerHTML = `${lesson.label} <span>·</span> ${lesson.time}`;
+  $('#heading').textContent = lesson.intro;
+  $('#lesson-kicker').textContent = `${lesson.label} · ${lesson.time}`;
   $('#lesson-title').textContent = lesson.title; $('#lesson-desc').textContent = lesson.desc; $('#goal').textContent = lesson.goal;
   $('#tip').textContent = lesson.tip; $('#detail').textContent = lesson.detail;
   $('#formula-title').textContent = lesson.algorithm ?? lesson.formulaTitle ?? '本节动作公式';
-  $('#duration').textContent = lesson.algorithm ?? lesson.en;
   $('#complete').innerHTML = `${caseIndex < lessons[selected].cases.length - 1 ? '下一个局面' : selected === lessons.length - 1 ? '返回第一节' : '继续下一节'} ${icon('arrow-right')}`;
-  $('.no-rush').textContent = '跟练达成目标后自动记录，随时可以切换章节';
   updateMode(); renderNavigation(); renderCases(); reset();
 }
 function updateMode() {
@@ -384,9 +399,9 @@ function updateMode() {
   $('#sandbox').classList.toggle('sandbox-active', mode === 'sandbox');
   $('#sandbox').innerHTML = `${icon(mode === 'sandbox' ? 'book-open' : 'blocks')} ${mode === 'sandbox' ? '返回教学' : '自由练习'} ${icon('arrow-up-right')}`;
   $('#view-label').textContent = mode === 'sandbox' ? '自由练习 · 随心转动' : '白色底面 · 黄色朝上';
-  $('#drag-hint').textContent = mode === 'learn' ? '拖动魔方，自由观察' : coarse ? '滑动魔方转层 · 拖动空白处换视角' : '拖动魔方面转层 · 拖动空白处换视角';
+  updateDragHint();
   document.body.dataset.mode = mode;
-  if (mode !== 'practice') $('#practice-message').textContent = mode === 'sandbox' ? '随心转动，探索六个面的变化。重置可恢复六面。' : coarse ? '点按下方按键转动，让理解发生在指尖。' : '用键盘或点击按键，让理解发生在指尖。';
+  if (mode !== 'practice') $('#practice-message').textContent = mode === 'sandbox' ? '随心转动，重置可恢复六面。' : coarse ? '点按下方按键转动魔方' : '点击按键或按键盘字母转动魔方';
   refreshIcons();
 }
 // Mode changes made by the learner: on phones, bring the cube and the move pad into view together.
@@ -470,7 +485,7 @@ function selectCase(index) {
   if (previousMode === 'practice') switchMode('practice');
 }
 $('#complete').onclick = () => { if (busy) return; if (caseIndex < lessons[selected].cases.length - 1) selectCase(caseIndex + 1); else selectLesson(selected === lessons.length - 1 ? 0 : selected + 1); };
-$('#case-select').onchange = e => selectCase(Number(e.target.value));
+$('#case-chips').onclick = e => { const b = e.target.closest('[data-case]'); if (b && Number(b.dataset.case) !== caseIndex) selectCase(Number(b.dataset.case)); };
 $('#formula').onclick = e => { const b = e.target.closest('[data-step]'); if (!b || busy || mode !== 'learn') return; const target = Number(b.dataset.step); reset(); for (let i = 0; i < target; i++) applyInstant(lesson.formula[i]); step = target; renderStep(); };
 $('#theme').onclick = () => {
   const next = isDark() ? 'light' : 'dark';
@@ -480,6 +495,18 @@ $('#theme').onclick = () => {
 function retheme() { applyTheme(); bodyMaterial.color.set(palette.body); arrowMaterial.color.set(palette.arrow); haloMaterial.color.set(palette.arrowHalo); focusCube(); renderStep(); }
 darkQuery.addEventListener('change', () => { if (!theme) retheme(); });
 $('#help').onclick = $('#more-help').onclick = () => $('#help-dialog').showModal();
+// Usage hints show until the learner has tried each gesture once.
+const hintsSeen = { orbit: store.get('cube-hint-orbit', false) === true, swipe: store.get('cube-hint-swipe', false) === true };
+function updateDragHint() {
+  const kind = mode === 'learn' ? 'orbit' : 'swipe';
+  $('#drag-hint').textContent = kind === 'orbit' ? '拖动魔方，换个角度观察' : coarse ? '在魔方上滑动，也能转动那一层' : '在魔方面上拖动，也能转动那一层';
+  $('.drag-hint').hidden = hintsSeen[kind];
+}
+function markHintSeen(kind) {
+  if (hintsSeen[kind]) return;
+  hintsSeen[kind] = true; store.set(`cube-hint-${kind}`, true); updateDragHint();
+}
+controls.addEventListener('start', () => markHintSeen('orbit'));
 $('#close-help').onclick = () => $('#help-dialog').close();
 $('#help-dialog').onclick = e => { if (e.target === $('#help-dialog')) $('#help-dialog').close(); };
 $('.brand').onclick = e => { e.preventDefault(); selectLesson(0); };
