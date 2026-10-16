@@ -30,12 +30,12 @@ document.querySelector('#app').innerHTML = `
   <div class="sidebar-bottom"><div class="progress-label"><span>学习进度</span><b id="progress-label"></b></div><div class="progress-track"><span id="progress"></span></div></div>
 </aside>
 <div class="main-shell">
-  <div class="lesson-bar"><button class="icon-button" id="lesson-prev" aria-label="上一节">${icon('chevron-left')}</button><button class="lesson-bar-title" id="lesson-open" aria-haspopup="dialog" aria-label="打开课程目录"><span id="lesson-bar-kicker"></span><b><span id="lesson-bar-name"></span>${icon('chevron-down')}</b></button><button class="icon-button" id="lesson-next" aria-label="下一节">${icon('chevron-right')}</button></div>
+  <div class="lesson-bar"><button class="icon-button" id="lesson-prev" aria-label="上一节">${icon('chevron-left')}</button><button class="lesson-bar-title" id="lesson-open" aria-haspopup="dialog" aria-label="打开课程目录"><span id="lesson-bar-kicker"></span><b><span id="lesson-bar-name"></span>${icon('chevron-down')}</b></button><button class="icon-button" id="lesson-next" aria-label="下一节">${icon('chevron-right')}</button><button class="icon-button bar-help" data-open-help aria-label="使用帮助">${icon('circle-help')}</button></div>
   <main>
-    <section class="page-heading"><h1 id="heading"></h1><div class="heading-actions"><button id="sandbox" class="outline-button"></button><button class="icon-button" id="theme"></button><button class="icon-button" id="help" title="使用帮助" aria-label="使用帮助">${icon('circle-help')}</button></div></section>
+    <section class="page-heading"><h1 id="heading"></h1><div class="heading-actions"><button class="icon-button" id="theme" data-theme-toggle></button><button class="icon-button" id="help" data-open-help title="使用帮助" aria-label="使用帮助">${icon('circle-help')}</button></div></section>
     <div class="workspace">
       <div class="cube-column">
-        <section class="cube-card"><div class="cube-top"><div class="mode-tabs"><button data-mode="learn" class="active">${icon('play-circle')} 动画教学</button><button data-mode="practice">${icon('hand')} 跟我练习</button></div></div>
+        <section class="cube-card"><div class="cube-top"><div class="mode-tabs"><button data-mode="learn" class="active">${icon('play-circle')} 动画教学</button><button data-mode="practice">${icon('hand')} 跟我练习</button><button data-mode="sandbox" id="sandbox">${icon('blocks')} 自由练习</button></div></div>
           <div class="viewport" id="viewport"><div class="view-label"><span class="view-dot"></span><span id="view-label">白色底面 · 黄色朝上</span></div><button class="view-reset icon-button" id="view-reset" title="恢复默认视角" aria-label="恢复默认视角">${icon('scan')}</button><div class="move-tag" id="move-tag" aria-hidden="true"><b id="move-tag-letter"></b><span id="move-tag-text"></span></div><div class="drag-hint">${icon('move')} <span id="drag-hint"></span></div></div>
           <div class="cube-options"><label><input id="focus" type="checkbox"/><span class="switch"></span> 聚焦目标块</label><label><input id="arrows" type="checkbox" checked/><span class="switch"></span> 转动指引</label></div>
           <div class="playback"><div class="timeline"><span id="step-status">动作 0 / 4</span><div class="timeline-track"><span id="timeline-fill"></span></div></div><div class="transport"><button id="reset" class="icon-button" title="重置本节" aria-label="重置">${icon('rotate-ccw')}</button><div class="transport-center"><button id="prev" class="icon-button" title="上一步" aria-label="上一步">${icon('skip-back')}</button><button id="play" class="play-button" title="播放或暂停" aria-label="播放">${icon('play')}</button><button id="next" class="icon-button" title="下一步" aria-label="下一步">${icon('skip-forward')}</button></div><button id="speed" class="speed-button" title="切换播放速度">1× <span>速度</span></button></div></div>
@@ -56,7 +56,7 @@ document.querySelector('#app').innerHTML = `
       </div>
     </div>
   </main>
-</div><div id="toast" role="status"></div><dialog id="lesson-sheet" class="sheet" aria-labelledby="sheet-title"><div class="sheet-head"><div><h2 id="sheet-title">课程目录</h2><p id="sheet-progress"></p></div><button class="icon-button" id="close-sheet" aria-label="关闭">${icon('x')}</button></div><nav id="sheet-lessons" aria-label="课程章节"></nav></dialog><dialog id="help-dialog" aria-labelledby="help-title"><button id="close-help" class="icon-button" aria-label="关闭">${icon('x')}</button><h2 id="help-title">使用帮助</h2>
+</div><div id="toast" role="status"></div><dialog id="lesson-sheet" class="sheet" aria-labelledby="sheet-title"><div class="sheet-head"><div><h2 id="sheet-title">课程目录</h2><p id="sheet-progress"></p></div><button class="icon-button" data-theme-toggle></button><button class="icon-button" id="close-sheet" aria-label="关闭">${icon('x')}</button></div><nav id="sheet-lessons" aria-label="课程章节"></nav></dialog><dialog id="help-dialog" aria-labelledby="help-title"><button id="close-help" class="icon-button" aria-label="关闭">${icon('x')}</button><h2 id="help-title">使用帮助</h2>
   <h3>看和转</h3><p>拖动魔方改变视角，滚轮或双指缩放。在「跟我练习」和「自由练习」中，按住魔方的一面滑动即可转动那一层；拖动魔方外的空白处旋转视角。</p>
   <h3>转动符号</h3><div class="help-grid"><b>R / L</b><span>右面 / 左面</span><b>U / D</b><span>顶层 / 底层</span><b>F / B</b><span>前面 / 后面</span><b>R′</b><span>带 ′ 表示逆时针</span><b>R2</b><span>转 180°，即同一面转两次</span></div><p>顺时针、逆时针都以正对该面的方向为准。</p>
   <h3 class="keyboard-only">键盘</h3><div class="help-grid keyboard-only"><b>U D L R F B</b><span>转动对应的面</span><b>Shift + 字母</b><span>逆时针转动</span><b>Space</b><span>播放 / 暂停动画</span><b>← / →</b><span>后退 / 前进一步</span></div>
@@ -72,16 +72,19 @@ if (theme !== 'light' && theme !== 'dark') theme = null;
 const isDark = () => theme ? theme === 'dark' : darkQuery.matches;
 const token = name => getComputedStyle(root).getPropertyValue(name).trim();
 const palette = { faces: [], body: '', dim: '', arrow: '', arrowHalo: '' };
+// Returns false while the stylesheet isn't applied yet (the tokens read as empty); the render loop then retries.
 function applyTheme() {
   if (theme) root.dataset.theme = theme; else delete root.dataset.theme;
+  const label = isDark() ? '切换到浅色模式' : '切换到深色模式';
+  document.querySelectorAll('[data-theme-toggle]').forEach(b => { b.innerHTML = icon(isDark() ? 'sun' : 'moon'); b.title = label; b.setAttribute('aria-label', label); });
+  refreshIcons();
+  if (!token('--cube-body')) return false;
   palette.faces = ['red', 'orange', 'yellow', 'white', 'green', 'blue'].map(c => token(`--cube-${c}`));
   Object.assign(palette, { body: token('--cube-body'), dim: token('--cube-dim'), arrow: token('--cube-arrow'), arrowHalo: token('--cube-arrow-halo') });
   document.querySelector('meta[name="theme-color"]').content = token('--bg');
-  const label = isDark() ? '切换到浅色模式' : '切换到深色模式';
-  $('#theme').innerHTML = icon(isDark() ? 'sun' : 'moon'); $('#theme').title = label; $('#theme').setAttribute('aria-label', label);
-  refreshIcons();
+  return true;
 }
-applyTheme();
+let themeReady = applyTheme();
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(34, 1, .1, 100);
@@ -282,7 +285,11 @@ function renderFrame() {
   camera.layers.set(GUIDE_LAYER); renderer.render(scene, camera);
   camera.layers.enableAll(); renderer.autoClear = true;
 }
-renderer.setAnimationLoop(() => { controls.update(); renderFrame(); placeMoveTag(); });
+renderer.setAnimationLoop(() => {
+  // WebKit can apply the stylesheet after this module runs; pick up the scene colors as soon as it does.
+  if (!themeReady) themeReady = retheme();
+  controls.update(); renderFrame(); placeMoveTag();
+});
 
 function renderNavigation() {
   const items = lessons.map((l, i) => `<button class="nav-item ${i === selected ? 'selected' : ''}" data-lesson="${i}" ${i === selected ? 'aria-current="true"' : ''}><span class="nav-number ${completed.includes(i) ? 'done' : ''}">${completed.includes(i) ? icon('check') : i === 0 ? icon('box') : `0${i}`}</span><span>${l.title}</span>${i === selected ? '<span class="nav-current"></span>' : ''}</button>`).join('');
@@ -395,9 +402,7 @@ function selectLesson(i, nextCase = 0) {
   updateMode(); renderNavigation(); renderCases(); reset();
 }
 function updateMode() {
-  document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-  $('#sandbox').classList.toggle('sandbox-active', mode === 'sandbox');
-  $('#sandbox').innerHTML = `${icon(mode === 'sandbox' ? 'book-open' : 'blocks')} ${mode === 'sandbox' ? '返回教学' : '自由练习'} ${icon('arrow-up-right')}`;
+  document.querySelectorAll('.mode-tabs [data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
   $('#view-label').textContent = mode === 'sandbox' ? '自由练习 · 随心转动' : '白色底面 · 黄色朝上';
   updateDragHint();
   document.body.dataset.mode = mode;
@@ -469,8 +474,7 @@ $('#speed').onclick = () => { speed = speed === 1 ? 1.5 : speed === 1.5 ? .5 : 1
 $('#focus').onchange = e => { focus = e.target.checked; focusCube(); };
 $('#arrows').onchange = e => { arrows = e.target.checked; focusCube(); renderStep(); };
 $('#view-reset').onclick = () => { camera.position.set(6.6, 5.1, 7.5); controls.target.set(0, 0, 0); controls.update(); };
-document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => switchMode(b.dataset.mode));
-$('#sandbox').onclick = () => switchMode(mode === 'sandbox' ? 'learn' : 'sandbox');
+document.querySelectorAll('.mode-tabs [data-mode]').forEach(b => b.onclick = () => switchMode(b.dataset.mode));
 $('#move-keys').onclick = e => { const b = e.target.closest('[data-move]'); if (b) requestMove(b.dataset.move + (reversed ? "'" : '')); };
 $('#inverse').onclick = () => { reversed = !reversed; $('#inverse').classList.toggle('on', reversed); $('#inverse').setAttribute('aria-pressed', String(reversed)); document.querySelectorAll('[data-move] small').forEach(el => el.textContent = reversed ? '↺' : '↻'); };
 $('#scramble').onclick = async () => {
@@ -487,14 +491,18 @@ function selectCase(index) {
 $('#complete').onclick = () => { if (busy) return; if (caseIndex < lessons[selected].cases.length - 1) selectCase(caseIndex + 1); else selectLesson(selected === lessons.length - 1 ? 0 : selected + 1); };
 $('#case-chips').onclick = e => { const b = e.target.closest('[data-case]'); if (b && Number(b.dataset.case) !== caseIndex) selectCase(Number(b.dataset.case)); };
 $('#formula').onclick = e => { const b = e.target.closest('[data-step]'); if (!b || busy || mode !== 'learn') return; const target = Number(b.dataset.step); reset(); for (let i = 0; i < target; i++) applyInstant(lesson.formula[i]); step = target; renderStep(); };
-$('#theme').onclick = () => {
+document.querySelectorAll('[data-theme-toggle]').forEach(b => b.onclick = () => {
   const next = isDark() ? 'light' : 'dark';
   theme = next === (darkQuery.matches ? 'dark' : 'light') ? null : next;
   store.set('cube-theme', theme); retheme();
-};
-function retheme() { applyTheme(); bodyMaterial.color.set(palette.body); arrowMaterial.color.set(palette.arrow); haloMaterial.color.set(palette.arrowHalo); focusCube(); renderStep(); }
+});
+function retheme() {
+  if (!applyTheme()) return false;
+  bodyMaterial.color.set(palette.body); arrowMaterial.color.set(palette.arrow); haloMaterial.color.set(palette.arrowHalo);
+  focusCube(); renderStep(); return true;
+}
 darkQuery.addEventListener('change', () => { if (!theme) retheme(); });
-$('#help').onclick = $('#more-help').onclick = () => $('#help-dialog').showModal();
+document.querySelectorAll('[data-open-help], #more-help').forEach(b => b.onclick = () => { $('#lesson-sheet').close(); $('#help-dialog').showModal(); });
 // Usage hints show until the learner has tried each gesture once.
 const hintsSeen = { orbit: store.get('cube-hint-orbit', false) === true, swipe: store.get('cube-hint-swipe', false) === true };
 function updateDragHint() {

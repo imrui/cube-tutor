@@ -14,6 +14,13 @@ async function selectLesson(page, index, variant = 0) {
   else { await page.locator('#lesson-open').click(); await page.locator(`#sheet-lessons [data-lesson="${index}"]`).click(); }
   if (variant) await page.locator(`[data-case="${variant}"]`).click();
 }
+// Wide screens toggle the theme from the page header; phones from the lesson sheet.
+async function toggleTheme(page) {
+  if (await page.locator('#theme').isVisible()) return page.locator('#theme').click();
+  await page.locator('#lesson-open').click();
+  await page.locator('#lesson-sheet [data-theme-toggle]').click();
+  await page.locator('#close-sheet').click();
+}
 async function move(page, face, expectedStep) {
   await page.locator(`[data-move="${face}"]`).click();
   await expect(page.locator('#reset')).toBeEnabled();
@@ -41,14 +48,14 @@ test('play, pause, previous and finish keep guidance aligned with the actual tur
   await expect(page.locator('#goal-status')).toHaveAttribute('data-met', 'true');
   await expect(page.locator('#move-tag')).not.toHaveClass(/visible/);
   await expect(page.locator('#viewport')).toHaveAttribute('data-guide-move', '');
-  await page.locator('#theme').click(); // Retheming must not bring the finished arrow back.
+  await toggleTheme(page); // Retheming must not bring the finished arrow back.
   await expect(page.locator('#viewport')).toHaveAttribute('data-guide-move', '');
   await expect(page.locator('.case-chip.passed')).toHaveCount(0);
 });
 
 test('half-turn practice rejects wrong moves, supports undo and validates a real cross', async ({ page }) => {
   await selectLesson(page, 1);
-  await page.locator('[data-mode="practice"]').click();
+  await page.locator('.mode-tabs [data-mode="practice"]').click();
   await page.locator('[data-move="R"]').click();
   await expect(page.locator('#toast')).toContainText('这一步是 F2');
   await expect(page.locator('#step-status')).toHaveText('动作 0 / 4');
@@ -67,7 +74,7 @@ test('half-turn practice rejects wrong moves, supports undo and validates a real
   await page.reload();
   await expect(page.locator('.case-chip.passed')).toHaveCount(1);
   await page.locator('[data-case="1"]').click();
-  await page.locator('[data-mode="practice"]').click();
+  await page.locator('.mode-tabs [data-mode="practice"]').click();
   await move(page, 'U', '动作 1 / 2');
   await move(page, 'F', '动作 1 / 2');
   await move(page, 'F', '动作 2 / 2');
@@ -96,7 +103,7 @@ test('both themes keep the enabled inverse symbol readable and persist the choic
   for (let i = 0; i < 2; i++) {
     const colors = await page.locator('#inverse span').evaluate(el => ({ color: getComputedStyle(el).color, background: getComputedStyle(el).backgroundColor }));
     expect(colors.color).not.toBe(colors.background);
-    await page.locator('#theme').click();
+    await toggleTheme(page);
   }
   const label = await page.locator('#theme').getAttribute('aria-label');
   await page.reload();
@@ -106,7 +113,7 @@ test('both themes keep the enabled inverse symbol readable and persist the choic
 test('mobile practice keeps the cube and touch keys visible without horizontal overflow', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile');
   await selectLesson(page, 2);
-  await page.locator('[data-mode="practice"]').tap();
+  await page.locator('.mode-tabs [data-mode="practice"]').tap();
   await expect(page.locator('#viewport')).toBeInViewport({ ratio: .9 });
   await expect(page.locator('#move-keys')).toBeInViewport({ ratio: .9 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -142,4 +149,18 @@ test('the lesson card keeps one goal line and folds the longer explanations', as
   await expect(page.locator('#move-tag-text')).toHaveText('右手抬起 · 右面顺时针转 90°');
   await selectLesson(page, 0);
   await expect(page.locator('#case-chips')).toBeHidden();
+});
+
+test('free practice is a mode tab and the phone header is a single lesson bar', async ({ page }, testInfo) => {
+  await page.locator('.mode-tabs [data-mode="sandbox"]').click();
+  await expect(page.locator('.mode-tabs [data-mode="sandbox"]')).toHaveClass(/active/);
+  await expect(page.locator('#goal')).toHaveText('还原六面');
+  await page.locator('.mode-tabs [data-mode="learn"]').click();
+  await expect(page.locator('.mode-tabs [data-mode="learn"]')).toHaveClass(/active/);
+  if (testInfo.project.name !== 'mobile') return;
+  await expect(page.locator('.sidebar')).toBeHidden();
+  await expect(page.locator('.page-heading')).toBeHidden();
+  await expect(page.locator('.cube-card')).toBeInViewport({ ratio: .95 });
+  await page.locator('.lesson-bar [data-open-help]').click();
+  await expect(page.locator('#help-dialog')).toBeVisible();
 });
