@@ -4,3 +4,8 @@ dist/
 *.log
 test-results/
 playwright-report/
+
+# Local Codex and Claude Code configuration
+/.codex/
+/.claude/
+/CLAUDE.local.md
