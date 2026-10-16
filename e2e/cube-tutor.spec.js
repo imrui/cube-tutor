@@ -8,6 +8,9 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
+// Phone projects (Android Chromium and iPhone WebKit) emulate a mobile touch device.
+const isTouchPhone = testInfo => Boolean(testInfo.project.use.isMobile && testInfo.project.use.hasTouch);
+
 async function selectLesson(page, index, variant = 0) {
   // Wide screens list lessons in the sidebar; small screens pick them from the lesson sheet.
   if (await page.locator('#lessons').isVisible()) await page.locator(`#lessons [data-lesson="${index}"]`).click();
@@ -111,7 +114,7 @@ test('both themes keep the enabled inverse symbol readable and persist the choic
 });
 
 test('mobile practice keeps the cube and touch keys visible without horizontal overflow', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'mobile');
+  test.skip(!isTouchPhone(testInfo));
   await selectLesson(page, 2);
   await page.locator('.mode-tabs [data-mode="practice"]').tap();
   await expect(page.locator('#viewport')).toBeInViewport({ ratio: .9 });
@@ -123,7 +126,7 @@ test('mobile practice keeps the cube and touch keys visible without horizontal o
 });
 
 test('mobile lesson bar stays reachable and switches lessons from the sheet', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'mobile');
+  test.skip(!isTouchPhone(testInfo));
   await expect(page.locator('#lessons')).toBeHidden();
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect(page.locator('.lesson-bar')).toBeInViewport();
@@ -157,10 +160,30 @@ test('free practice is a mode tab and the phone header is a single lesson bar', 
   await expect(page.locator('#goal')).toHaveText('还原六面');
   await page.locator('.mode-tabs [data-mode="learn"]').click();
   await expect(page.locator('.mode-tabs [data-mode="learn"]')).toHaveClass(/active/);
-  if (testInfo.project.name !== 'mobile') return;
+  if (!isTouchPhone(testInfo)) return;
   await expect(page.locator('.sidebar')).toBeHidden();
   await expect(page.locator('.page-heading')).toBeHidden();
   await expect(page.locator('.cube-card')).toBeInViewport({ ratio: .95 });
   await page.locator('.lesson-bar [data-open-help]').click();
   await expect(page.locator('#help-dialog')).toBeVisible();
+});
+
+// Regression: iOS Safari applied the stylesheet late, the scene read empty color tokens and drew an all-white cube.
+test('the 3D cube is drawn with its sticker colors on first load', async ({ page }) => {
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--cube-body').trim())).not.toBe('');
+  const canvas = page.locator('#viewport canvas');
+  // Decode a screenshot of the canvas in the page and measure how much of it is strongly saturated (red, orange, yellow, green, blue stickers).
+  const coloredShare = async () => {
+    const png = (await canvas.screenshot()).toString('base64');
+    return page.evaluate(async src => {
+      const img = new Image(); img.src = `data:image/png;base64,${src}`; await img.decode();
+      const ctx = Object.assign(document.createElement('canvas'), { width: img.width, height: img.height }).getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const { data } = ctx.getImageData(0, 0, img.width, img.height);
+      let colored = 0;
+      for (let i = 0; i < data.length; i += 4) if (Math.max(data[i], data[i + 1], data[i + 2]) - Math.min(data[i], data[i + 1], data[i + 2]) > 90) colored++;
+      return colored / (data.length / 4);
+    }, png);
+  };
+  await expect.poll(coloredShare, { timeout: 10_000 }).toBeGreaterThan(0.02);
 });
