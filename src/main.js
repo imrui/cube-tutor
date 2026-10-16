@@ -189,9 +189,11 @@ class LayerArc extends THREE.Curve {
     return target.setComponent(this.axis, this.offset).setComponent((this.axis + 1) % 3, u).setComponent((this.axis + 2) % 3, v);
   }
 }
+// A half turn's arc is about a third longer than a quarter turn's (about 106° against 81°); a near-half-ring arc
+// wrapped two whole faces and read as too long. The move label already says 180° and counts the two turns.
 function buildArrow(axis, layer, turns, center) {
   const dir = Math.sign(turns), half = Math.abs(turns) === 2;
-  const curve = new LayerArc(axis, layer, center - dir * (half ? 1.55 : .8), center + dir * (half ? 1.35 : .62));
+  const curve = new LayerArc(axis, layer, center - dir * (half ? 1 : .8), center + dir * (half ? .85 : .62));
   const end = curve.getPoint(1); arrowTip.copy(end);
   const tangent = curve.getTangent(1), spin = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
   const head = (r, h, back) => { const g = new THREE.ConeGeometry(r, h, 28); g.translate(0, h / 2 - back, 0); g.applyQuaternion(spin); g.translate(...end.toArray()); return g; };
